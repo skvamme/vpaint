@@ -202,7 +202,8 @@ HEADERS += MainWindow.h \
     Export/GeneralExportWidget.h \
     Export/SvgExportWidget.h \
     Export/ExportDialog.h \
-    Export/ExportSettings.h
+    Export/ExportSettings.h \
+    QVBoxHeading.h
 
 SOURCES += main.cpp \
     SaveAndLoad.cpp \
@@ -306,4 +307,5 @@ SOURCES += main.cpp \
     Export/GeneralExportWidget.cpp \
     Export/SvgExportWidget.cpp \
     Export/ExportDialog.cpp \
-    Export/ExportSettings.cpp
+    Export/ExportSettings.cpp \
+    QVBoxHeading.cpp

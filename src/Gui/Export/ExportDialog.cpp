@@ -9,9 +9,12 @@
 #include "ExportDialog.h"
 
 #include "GeneralExportWidget.h"
+#include "QVBoxHeading.h"
 
 #include <QDialogButtonBox>
 #include <QVBoxLayout>
+#include <QFrame>
+#include <QPushButton>
 
 ExportDialog::ExportDialog(
         Scene * scene,
@@ -23,10 +26,12 @@ ExportDialog::ExportDialog(
 
     scene_(scene),
     multiView_(multiView),
-    exportSettings_(exportSettings),
-
-    exportText_("Export")
+    exportSettings_(exportSettings)
 {
+    // Headings to separate the different sections of settings
+    QVBoxHeading * generalSettingsHeading = new QVBoxHeading("General Settings");
+    QVBoxHeading * fileSpecificSettingsHeading = new QVBoxHeading("Specific Settings");
+
     // Create general export widget
     generalExportWidget_ = new GeneralExportWidget(this);
 
@@ -34,23 +39,27 @@ ExportDialog::ExportDialog(
     fileSpecificExportWidget_ = new QWidget(this);
 
     // Dialog button box
-    QDialogButtonBox * buttonBox = new QDialogButtonBox(QDialogButtonBox::Cancel);
-    buttonBox->addButton(exportText(), QDialogButtonBox::AcceptRole);
+    QDialogButtonBox * buttonBox = new QDialogButtonBox();
+    exportButton_ = buttonBox->addButton(QDialogButtonBox::Save);
+    cancelButton_ = buttonBox->addButton(QDialogButtonBox::Cancel);
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
 
     // Main layout
     QVBoxLayout * layout = new QVBoxLayout();
+    layout->addWidget(generalSettingsHeading);
     layout->addWidget(generalExportWidget_);
+    layout->addWidget(fileSpecificSettingsHeading);
     layout->addWidget(fileSpecificExportWidget_);
     layout->addWidget(buttonBox);
+    layout->addStretch();
     setLayout(layout);
 
-    // Window title
-    setWindowTitle(exportText() + " Settings");
+    // Set default export text
+    setExportText("Export");
 
     // Set minimimum size
-    setMinimumSize(400, 400);
+    setMinimumSize(350, 100);
 }
 
 ExportSettings * ExportDialog::exportSettings() const
@@ -61,9 +70,21 @@ ExportSettings * ExportDialog::exportSettings() const
 void ExportDialog::setExportText(const QString & exportText)
 {
     exportText_ = exportText;
+    updateExportButtonText_();
+    updateWindowTitle_();
 }
 
 QString ExportDialog::exportText() const
 {
     return exportText_;
+}
+
+void ExportDialog::updateExportButtonText_()
+{
+    exportButton_->setText(exportText());
+}
+
+void ExportDialog::updateWindowTitle_()
+{
+    setWindowTitle(exportText() + " Settings");
 }
