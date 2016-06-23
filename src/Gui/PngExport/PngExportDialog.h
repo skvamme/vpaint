@@ -6,9 +6,19 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
-#include "Application.h"
+#ifndef PNGEXPORTDIALOG_H
+#define PNGEXPORTDIALOG_H
 
-int main(int argc, char ** argv)
+#include <QDialog>
+
+class Scene;
+
+class PngExportDialog: public QDialog
 {
-    return Application(argc, argv).exec();
-}
+    Q_OBJECT
+
+public:
+    PngExportDialog(Scene * scene);
+};
+
+#endif // PNGEXPORTDIALOG_H

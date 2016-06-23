@@ -20,6 +20,8 @@
 #include "AnimatedCycleWidget.h"
 #include "EditCanvasSizeDialog.h"
 #include "ExportPngDialog.h"
+#include "PngExport/PngExportDialog.h"
+#include "PngExport/PngExporter.h"
 #include "AboutDialog.h"
 #include "SelectionInfoWidget.h"
 #include "Background/BackgroundWidget.h"
@@ -31,8 +33,9 @@
 #include "XmlStreamReader.h"
 #include "SaveAndLoad.h"
 
-#include <QCoreApplication>
-#include <QApplication>
+#include "Application.h"
+#include "Export/ExportManager.h"
+
 #include <QtDebug>
 #include <QStatusBar>
 #include <QFileDialog>
@@ -48,20 +51,18 @@
 #include <QDesktopServices>
 #include <QShortcut>
 
-
-/*********************************************************************
- *                             Constructor
- */
-
-
 MainWindow::MainWindow() :
     scene_(0),
+
     multiView_(0),
+    view3D_(0),
+
+    timeline_(0),
+
+    selectionInfo_(0),
+    editCanvasSizeDialog_(0),
 
     aboutDialog_(0),
-
-    gettingStarted_(0),
-    userManual_(0),
 
     undoStack_(),
     undoIndex_(-1),
@@ -69,20 +70,8 @@ MainWindow::MainWindow() :
 
     fileHeader_("---------- Vec File ----------"),
     documentFilePath_(),
-    autosaveFilename_("0.vec"),
-    autosaveTimer_(),
-    autosaveIndex_(0),
-    autosaveOn_(true),
-    autosaveDir_(),
 
-    clipboard_(0),
-
-    view3D_(0),
-    timeline_(0),
-    selectionInfo_(0),
-    exportPngDialog_(0),
-    editCanvasSizeDialog_(0),
-    exportingPng_(false)
+    clipboard_(0)
 {
     // Global object
     Global::initialize(this);
@@ -142,42 +131,40 @@ MainWindow::MainWindow() :
             this, SLOT(update()));
 
     // initializations
-    createActions();
-    createDocks();
-    createStatusBar();
-    createToolbars();
-    createMenus();
+    createActions_();
+    createDocks_();
+    createStatusBar_();
+    createToolbars_();
+    createMenus_();
 
     // handle undo/redo
     resetUndoStack_();
-    connect(scene_, SIGNAL(checkpoint()), this, SLOT(addToUndoStack()));
+    connect(scene_, SIGNAL(checkpoint()), this, SLOT(addToUndoStack_()));
 
     // Window icon
     QGuiApplication::setWindowIcon(QIcon(":/images/icon-256.png"));
 
-    // Help
-    gettingStarted_ = new QTextBrowser(this);
-    gettingStarted_->setWindowFlags(Qt::Window);
-    //gettingStarted_->setSource(QUrl("help/getting-started.htm"));
-    gettingStarted_->setSearchPaths(QStringList("help/"));
-    gettingStarted_->setMinimumSize(800,500);
-
-    userManual_ = new QTextBrowser(this);
-    userManual_->setWindowFlags(Qt::Window);
-    //userManual_->setSource(QUrl("help/user-manual.htm"));
-    userManual_->setSearchPaths(QStringList("help/"));
-    userManual_->setMinimumSize(800,500);
-
     // Remove context menu on rightclick
     setContextMenuPolicy(Qt::NoContextMenu);
 
-    // Autosave
-    autosaveBegin();
+    // Open file when requested by application.
+    // XXX this should probably move from MainWindow to Application, whenever
+    // open/save is implemented in Application instead of MainWindow.
+    // Though, it's not 100% obvious: indeed, the app should ask users whether or not to save changes of
+    // current document. This implies opening a dialog. This implies being aware that
+    // it's a GUI application, and have a pointer to MainWindow.
+    QObject::connect(qApp, &Application::openFileRequested,
+                     this, &MainWindow::onOpenFileRequested_);
 }
 
 void MainWindow::updateObjectProperties()
 {
     inspector->setObjects(scene()->getVAC_()->selectedCells());
+}
+
+MultiView * MainWindow::multiView() const
+{
+    return multiView_;
 }
 
 View * MainWindow::activeView() const
@@ -200,119 +187,10 @@ bool MainWindow::isShowCanvasChecked() const
     return actionShowCanvas->isChecked();
 
 }
-void MainWindow::autosave()
-{
-    save_(autosaveDir_.absoluteFilePath(autosaveFilename_));
-}
-
-void MainWindow::autosaveBegin()
-{
-    bool success = true;
-
-    QString dataPath = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
-    QDir().mkpath(dataPath);
-    QDir dataDir(dataPath);
-    if(!dataDir.exists())
-        success = false;
-
-    if(success)
-    {
-        if(!dataDir.exists("autosave"))
-        {
-            dataDir.mkdir("autosave");
-        }
-        dataDir.cd("autosave");
-        autosaveDir_ = dataDir;
-        if(!autosaveDir_.exists())
-        {
-            success = false;
-        }
-        else
-        {
-            QStringList nameFilters;
-            nameFilters << "*.vec";
-            autosaveDir_.setNameFilters(nameFilters);
-            QFileInfoList fileInfoList = autosaveDir_.entryInfoList(QDir::Files, QDir::Name);
-            if(fileInfoList.isEmpty())
-            {
-                autosaveIndex_ = 0;
-            }
-            else
-            {
-                QString filename = fileInfoList.last().fileName();
-                QStringList splitted = filename.split('.');
-                if(splitted.size() < 2)
-                {
-                    qDebug() << "Warning: autosaved file matching *.vec has been found, but failed to be split into %1.vec";
-                    autosaveIndex_ = 0;
-                }
-                else
-                {
-                    int lastIndex = splitted.first().toInt();
-                    autosaveIndex_ = lastIndex + 1;
-                }
-            }
-            autosaveFilename_.setNum(autosaveIndex_);
-            autosaveFilename_ += QString(".vec");
-            while(autosaveDir_.exists(autosaveFilename_))
-            {
-                autosaveIndex_++;
-                autosaveFilename_.setNum(autosaveIndex_);
-                autosaveFilename_ += QString(".vec");
-            }
-        }
-    }
-
-    if(success)
-    {
-        autosaveOn_ = true;
-        autosaveTimer_.setInterval(60000); // every minute
-        connect(&autosaveTimer_,SIGNAL(timeout()), this, SLOT(autosave()));
-        autosaveTimer_.start();
-    }
-    else
-    {
-        autosaveOn_ = false;
-    }
-
-    /*
-    QSettings settings(companyName_, appName_);
-    bool hasCrashed = settings.value("has-crashed",false).toBool();
-    if(hasCrashed)
-    {
-        QMessageBox::StandardButton reply;
-        reply = QMessageBox::question(this,
-                                      "Crash",
-                                      "Oops... it seems that VPaint has crashed during its previous execution :-(\n "
-                                      "We are terribly sorry and will do our best to fix the issue in future releases.\n\n"
-                                      "Fortunately, VPaint has saved your work before crashing. Do you want to open it?\n\n"
-                                      "Note: this message also appears if another instance of VPaint is running. In this case, press \"No\".",
-                                        QMessageBox::Yes|QMessageBox::No);
-        if (reply == QMessageBox::Yes)
-        {
-            doOpen(autosaveFilename_);
-        }
-    }
-    settings.setValue("has-crashed",true);
-    autosaveTimer_.setInterval(1000);
-    connect(&autosaveTimer_,SIGNAL(timeout()), this, SLOT(autosave()));
-    autosaveTimer_.start();
-    */
-
-}
-
-void MainWindow::autosaveEnd()
-{
-    if(autosaveOn_)
-    {
-        autosaveDir_.remove(autosaveFilename_);
-    }
-}
 
 MainWindow::~MainWindow()
 {
     clearUndoStack_();
-    autosaveEnd();
 }
 
 Scene * MainWindow::scene() const
@@ -320,8 +198,7 @@ Scene * MainWindow::scene() const
     return scene_;
 }
 
-
-void MainWindow::addToUndoStack()
+void MainWindow::addToUndoStack_()
 {
     undoIndex_++;
     for(int j=undoStack_.size()-1; j>=undoIndex_; j--)
@@ -348,7 +225,7 @@ void MainWindow::clearUndoStack_()
 void MainWindow::resetUndoStack_()
 {
     clearUndoStack_();
-    addToUndoStack();
+    addToUndoStack_();
     setUnmodified_();
 }
 
@@ -468,8 +345,6 @@ void MainWindow::setOnionSkinningEnabled(bool enabled)
     multiView_->setOnionSkinningEnabled(enabled);
 }
 
-
-
 void MainWindow::toggleShowCanvas(bool)
 {
     update();
@@ -482,11 +357,13 @@ bool MainWindow::isEditCanvasSizeVisible() const
     if(editCanvasSizeDialog_)
         res = res || editCanvasSizeDialog_->isVisible();
 
-    if(exportPngDialog_)
-        res = res || exportPngDialog_->isVisible();
+    /*
+    if(pngExportDialog_)
+        res = res || pngExportDialog_->isVisible();
 
     if(exportingPng_)
         res = true;
+        */
 
     return res;
 }
@@ -509,15 +386,8 @@ void MainWindow::editCanvasSize()
     editCanvasSizeDialog_->show();
 }
 
-/*********************************************************************
- *                       Overloaded event methods
- */
-
-
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
-    // Early catch of overloaded standard shortcut to prevent the "ambiguous shortcut" popup to be shown
-
     // ignore the event
     event->ignore();
 }
@@ -542,30 +412,12 @@ void MainWindow::updatePicking()
     multiView_->updatePicking();
 }
 
-bool MainWindow::eventFilter(QObject *object, QEvent *event)
-{
-    qDebug() << "event filter";
-
-    if(event->type() == QEvent::Shortcut)
-    {
-        qDebug() << "Shortcut event";
-    }
-    return QMainWindow::eventFilter(object, event);
-}
-
-
-
-/*********************************************************************
- *                     Save / Load / Close
- */
-
-void MainWindow::closeEvent(QCloseEvent *event)
+void MainWindow::closeEvent(QCloseEvent * event)
 {
     if (maybeSave_())
     {
-        global()->writeSettings();
+        onAboutToClose_();
         event->accept();
-        selectionInfo_->close();
     }
     else
     {
@@ -573,50 +425,67 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
 }
 
-bool MainWindow::maybeSave_()
+void MainWindow::onAboutToClose_()
 {
-    if (isModified_())
-    {
-        QMessageBox::StandardButton ret;
-        ret = QMessageBox::warning(this, tr("Pending changes"),
-                                   tr("The document has been modified.\n"
-                                      "Do you want to save your changes?"),
-                                   QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
-        if (ret == QMessageBox::Save)
-            return save();
-        else if (ret == QMessageBox::Cancel)
-            return false;
-    }
-    return true;
+    global()->writeSettings();
+    selectionInfo_->close();
 }
 
 void MainWindow::newDocument()
 {
     if (maybeSave_())
     {
-        // Set document file path
-        setDocumentFilePath_("");
-
-        // Set empty scene
-        Scene * newScene = new Scene();
-        scene_->copyFrom(newScene);
-        delete newScene;
-
-        // Add to undo stack
-        resetUndoStack_();
+        newDocument_();
     }
+}
+
+void MainWindow::newDocument_()
+{
+    // Set document file path
+    setDocumentFilePath_("");
+
+    // Set empty scene
+    Scene * newScene = new Scene();
+    scene_->copyFrom(newScene);
+    delete newScene;
+
+    // Reset undo stack
+    resetUndoStack_();
+
 }
 
 void MainWindow::open()
 {
     if (maybeSave_())
     {
-        // Browse for a file to open
-        QString filePath = QFileDialog::getOpenFileName(this, tr("Open"), global()->documentDir().path(), tr("Vec files (*.vec)"));
+        open_();
+    }
+}
 
-        // Open file
-        if (!filePath.isEmpty())
-            open_(filePath);
+void MainWindow::onOpenFileRequested_(const QString & filename)
+{
+    if (!filename.isEmpty())
+    {
+        if (maybeSave_())
+        {
+            open_(filename);
+        }
+    }
+}
+
+void MainWindow::open_()
+{
+    // Browse for a file to open
+    QString filePath = QFileDialog::getOpenFileName(
+                this,
+                tr("Open"),
+                global()->documentDir().path(),
+                tr("Vec files (*.vec)"));
+
+    // Open file
+    if (!filePath.isEmpty())
+    {
+        open_(filePath);
     }
 }
 
@@ -646,6 +515,9 @@ bool MainWindow::save()
 
 bool MainWindow::saveAs()
 {
+    return true;
+
+    /*
     QString filename = QFileDialog::getSaveFileName(this, tr("Save As"), global()->documentDir().path());
 
     if (filename.isEmpty())
@@ -669,8 +541,71 @@ bool MainWindow::saveAs()
         QMessageBox::warning(this, tr("Error"), tr("File %1 not saved: couldn't write file").arg(filename));
         return false;
     }
+    */
 }
 
+bool MainWindow::exportDocument()
+{
+    return true;
+}
+
+bool MainWindow::exportAs()
+{
+    qApp->exportManager()->exportAsModeless();
+
+    return true;
+}
+
+// This function does the following:
+//   1. If there are no changes that can be saved, returns true.
+//   2. If there are changes that can be saved:
+//        - Asks user if changes should be saved
+//        - If 'Save':
+//            * Returns true if successfully saved
+//            * Returns false if not successfully saved
+//        - If 'Discard':
+//            * Returns true if successfully saved
+//        - If 'Cancel':
+//            * Returns false
+//
+bool MainWindow::maybeSave_()
+{
+    if (isModified_())
+    {
+        // Ask user if changes should be saved
+        QMessageBox::StandardButton ret;
+        ret = QMessageBox::warning(
+                    this,
+                    tr("Pending changes"),
+                    tr("The document has been modified.\n"
+                       "Do you want to save your changes?"),
+                    QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+
+        if (ret == QMessageBox::Save)
+        {
+            // Return true if user wants to save, and the document is successfully saved
+            // Return false if user wants to save, but the document is not successfully saved
+            return save();
+        }
+        else if (ret == QMessageBox::Discard)
+        {
+            // Return true if the user wants to discard the changes
+            return true;
+        }
+        else // if (ret == QMessageBox::Cancel)
+        {
+            // Return false if the user wants to cancel the operation
+            return false;
+        }
+    }
+    else
+    {
+        // Return true if no changes to save
+        return true;
+    }
+}
+
+/*
 bool MainWindow::exportSVG()
 {
     QString filename = QFileDialog::getSaveFileName(this, tr("Export as SVG"), global()->documentDir().path());
@@ -695,31 +630,29 @@ bool MainWindow::exportSVG()
 
 bool MainWindow::exportPNG()
 {
-    exportPngFilename_ = QFileDialog::getSaveFileName(this, tr("Export as PNG"), global()->documentDir().path());
-    if (exportPngFilename_.isEmpty())
-        return false;
+    //exportPngFilename_ = QFileDialog::getSaveFileName(this, tr("Export as PNG"), global()->documentDir().path());
+    //if (exportPngFilename_.isEmpty())
+    //    return false;
+    //
+    //if(!exportPngFilename_.endsWith(".png"))
+    //    exportPngFilename_.append(".png");
 
-    if(!exportPngFilename_.endsWith(".png"))
-        exportPngFilename_.append(".png");
-
-    if(!exportPngDialog_)
+    if(!pngExportDialog_)
     {
-        exportPngDialog_ = new ExportPngDialog(scene());
-        exportPngDialog_->setParent(this, Qt::Dialog);
-        exportPngDialog_->setModal(false);
-        connect(exportPngDialog_, SIGNAL(accepted()), this, SLOT(acceptExportPNG()));
-        connect(exportPngDialog_, SIGNAL(rejected()), this, SLOT(rejectExportPNG()));
+        pngExportDialog_ = new ExportPngDialog(scene());
+        pngExportDialog_->setParent(this, Qt::Dialog);
+        pngExportDialog_->setModal(false);
+        connect(pngExportDialog_, SIGNAL(accepted()), this, SLOT(acceptExportPNG()));
+        connect(pngExportDialog_, SIGNAL(rejected()), this, SLOT(rejectExportPNG()));
     }
 
-    exportPngCanvasWasVisible_ = actionShowCanvas->isChecked();
-    if(!exportPngCanvasWasVisible_)
+    pngExportCanvasWasVisible_ = actionShowCanvas->isChecked();
+    if(!pngExportCanvasWasVisible_)
         actionShowCanvas->setChecked(true);
 
-    exportPngDialog_->show();
+    pngExportDialog_->show();
 
-    // Note: the dialog is modeless to allow user to pan/zoom the image while changing
-    //       canvas size and resolution.
-    //       But this mean that we can't return here whether or not the export was done
+    // Note: the dialog is modeless to allow changing the view settings
 
     // The return value doesn't actually make sense here. Maybe this function
     // shouldn't return anything instead.
@@ -731,16 +664,23 @@ bool MainWindow::acceptExportPNG()
     exportingPng_ = true; // This is necessary so that isEditCanvasSizeVisible() returns true
                           // so that global()->toolMode() returns EDIT_CANVAS_SIZE so that
                           // selection is not rendered as selected
+
+
+
     bool success = doExportPNG(exportPngFilename_);
+
+
+    PngExporter pngExporter;
+    pngExporter.exec();
+
     exportingPng_ = false;
 
+    //if(!success)
+    //{
+    //    QMessageBox::warning(this, tr("Error"), tr("File %1 not saved: couldn't write file").arg(exportPngFilename_));
+    //}
 
-    if(!success)
-    {
-        QMessageBox::warning(this, tr("Error"), tr("File %1 not saved: couldn't write file").arg(exportPngFilename_));
-    }
-
-    if(!exportPngCanvasWasVisible_)
+    if(!pngExportCanvasWasVisible_)
         actionShowCanvas->setChecked(false);
 
     updatePicking();
@@ -751,7 +691,7 @@ bool MainWindow::acceptExportPNG()
 
 bool MainWindow::rejectExportPNG()
 {
-    if(!exportPngCanvasWasVisible_)
+    if(!pngExportCanvasWasVisible_)
         actionShowCanvas->setChecked(false);
 
     updatePicking();
@@ -759,6 +699,7 @@ bool MainWindow::rejectExportPNG()
 
     return false;
 }
+*/
 
 void MainWindow::setDocumentFilePath_(const QString & filePath)
 {
@@ -866,49 +807,6 @@ bool MainWindow::save_(const QString & filePath, bool relativeRemap)
     return true;
 }
 
-void MainWindow::read_DEPRECATED(QTextStream & in)
-{
-    // Buffer variables
-    QChar cskip;
-    QString field;
-
-    // Header
-    QString header = in.readLine();
-    if(header != fileHeader_)
-        QMessageBox::warning(this, tr("Warning"), tr("Incorrect file header. I'm still trying to open the file but it might be corrupted."));
-
-    // Version
-    int minor, major;
-    field = Read::field(in);
-    in >> major >> cskip >> minor;
-    if(major!=1 || minor!=0)
-        QMessageBox::warning(this, tr("Warning"), tr("Incorrect file version. I'm still trying to open the file but it might be corrupted."));
-
-    // Scene
-    field = Read::field(in);
-    Read::skipBracket(in);
-    scene_->read(in);
-    Read::skipBracket(in);
-}
-
-void MainWindow::write_DEPRECATED(QTextStream & out)
-{
-    Save::resetIndent();
-
-    // Header
-    out << fileHeader_;
-
-    // Version
-    out << Save::newField("Version")
-        << 1 << "." << 0;
-
-    // Scene
-    out << Save::newField("Scene");
-    out << Save::openCurlyBrackets();
-    scene_->save(out);
-    out << Save::closeCurlyBrackets();
-}
-
 void MainWindow::write(XmlStreamWriter &xml)
 {
     // Start XML Document
@@ -1012,135 +910,9 @@ void MainWindow::read(XmlStreamReader & xml)
     }
 }
 
-bool MainWindow::doExportSVG(const QString & filename)
-{
-    QFile data(filename);
-    if (data.open(QFile::WriteOnly | QFile::Truncate | QFile::Text)) {
-
-        QTextStream out(&data);
-
-        QString header = QString(
-                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"
-                "<!-- Created with VPaint (http://www.vpaint.org/) -->\n\n"
-
-                "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"\n"
-                "  \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n"
-                "<svg \n"
-                "  viewBox=\"%1 %2 %3 %4\"\n"
-                "  xmlns=\"http://www.w3.org/2000/svg\"\n"
-                "  xmlns:xlink=\"http://www.w3.org/1999/xlink\">\n")
-
-                .arg(scene_->left())
-                .arg(scene_->top())
-                .arg(scene_->width())
-                .arg(scene_->height());
-
-        QString footer = "</svg>";
-
-        out << header;
-        scene_->exportSVG(multiView_->activeView()->activeTime(), out);
-        out << footer;
-
-        statusBar()->showMessage(tr("File %1 successfully saved.").arg(filename));
-        return true;
-    }
-    else
-    {
-        qDebug() << "Error: cannot open file";
-        return false;
-    }
-}
-
-bool MainWindow::doExportPNG(const QString & filename)
-{
-    if(!exportPngDialog_->exportSequence())
-    {
-        // Export single frame
-
-        QImage img = multiView_->activeView()->drawToImage(
-                    scene()->left(), scene()->top(), scene()->width(), scene()->height(),
-                    exportPngDialog_->pngWidth(), exportPngDialog_->pngHeight(),
-                    exportPngDialog_->useViewSettings());
-
-        img.save(filename);
-    }
-    else
-    {
-        // Export sequence of frames
-
-        // Decompose filename into basename + suffix. Example:
-        //     abc_1234_5678.de.png  ->   abc_1234  +  de.png
-        QFileInfo info(filename);
-        QString baseName = info.baseName();
-        QString suffix = info.suffix();
-        // Decompose basename into cleanedbasename + numbering. Examples:
-        //     abc_1234_5678  ->     abc_1234 + 5678
-        int iNumbering = baseName.indexOf(QRegExp("_[0-9]*$"));
-        if(iNumbering != -1)
-        {
-            baseName.chop(baseName.length() - iNumbering);
-        }
-
-        // Get dir
-        QDir dir = info.absoluteDir();
-
-        // Get and delete files from previous export
-        QString nameFilter = baseName + QString("_*.") +  suffix;
-        QStringList nameFilters = QStringList() << nameFilter;
-        QStringList prevFiles = dir.entryList(nameFilters, QDir::Files);
-        foreach(QString prevFile, prevFiles)
-            dir.remove(prevFile);
-
-        // Get frame numbers to export
-        int firstFrame = timeline()->firstFrame();
-        int lastFrame = timeline()->lastFrame();
-
-        // Create Progress dialog for feedback
-        QProgressDialog progress("Export sequence as PNGs...", "Abort", 0, lastFrame-firstFrame+1, this);
-        progress.setWindowModality(Qt::WindowModal);
-
-        // Export all frames in the sequence
-        for(int i=firstFrame; i<=lastFrame; ++i)
-        {
-            progress.setValue(i-firstFrame);
-
-            if (progress.wasCanceled())
-                break;
-
-            QString number = QString("%1").arg(i, 4, 10, QChar('0'));
-            QString filePath = dir.absoluteFilePath(
-                        baseName + QString("_") + number + QString(".") + suffix);
-
-            QImage img = multiView_->activeView()->drawToImage(
-                        Time(i),
-                        scene()->left(), scene()->top(), scene()->width(), scene()->height(),
-                        exportPngDialog_->pngWidth(), exportPngDialog_->pngHeight(),
-                        exportPngDialog_->useViewSettings());
-
-            img.save(filePath);
-        }
-        progress.setValue(lastFrame-firstFrame+1);
-
-    }
-
-    return true;
-}
-
 void MainWindow::onlineDocumentation()
 {
     QDesktopServices::openUrl(QUrl("http://www.vpaint.org/doc"));
-}
-
-void MainWindow::gettingStarted()
-{
-    gettingStarted_->setSource(QUrl("help/getting-started.htm"));
-    gettingStarted_->show();
-}
-
-void MainWindow::manual()
-{
-    gettingStarted_->setSource(QUrl("help/user-manual.htm"));
-    userManual_->show();
 }
 
 void MainWindow::about()
@@ -1270,7 +1042,7 @@ void MainWindow::updateViewMenu()
  */
 
 
-void MainWindow::createActions()
+void MainWindow::createActions_()
 {
     ///////////////        FILE        ///////////////
 
@@ -1288,27 +1060,41 @@ void MainWindow::createActions()
 
     // Save
     actionSave = new QAction(/*QIcon(":/iconSave"),*/ tr("&Save"), this);
-    actionSave->setStatusTip(tr("Save current illustration."));
-    actionSave->setShortcut(QKeySequence::Save);
+    actionSave->setStatusTip(tr("Save document."));
+    actionSave->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_S));
     connect(actionSave, SIGNAL(triggered()), this, SLOT(save()));
 
     // Save As
     actionSaveAs = new QAction(/*QIcon(":/iconSave"),*/ tr("Save &As..."), this);
-    actionSaveAs->setStatusTip(tr("Save current illustration with a new name."));
+    actionSaveAs->setStatusTip(tr("Save document with a new name."));
     actionSaveAs->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_S));
     connect(actionSaveAs, SIGNAL(triggered()), this, SLOT(saveAs()));
 
+    // Export
+    actionExport = new QAction(/*QIcon(":/iconSave"),*/ tr("&Export"), this);
+    actionExport->setStatusTip(tr("Export document with the same settings as last export."));
+    actionExport->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_E));
+    connect(actionExport, SIGNAL(triggered()), this, SLOT(exportDocument()));
+
+    // Export As
+    actionExportAs = new QAction(/*QIcon(":/iconSave"),*/ tr("Export &As..."), this);
+    actionExportAs->setStatusTip(tr("Export document as a different file format."));
+    actionExportAs->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_E));
+    connect(actionExportAs, SIGNAL(triggered()), this, SLOT(exportAs()));
+
+    /*
     // Export SVG
-    actionExportSVG = new QAction(/*QIcon(":/iconSave"),*/ tr("SVG (frame) [Beta]"), this);
+    actionExportSVG = new QAction(/tr("SVG (frame) [Beta]"), this);
     actionExportSVG->setStatusTip(tr("Save the current illustration in the SVG file format."));
     //actionExportSVG->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_E));
     connect(actionExportSVG, SIGNAL(triggered()), this, SLOT(exportSVG()));
 
     // Export PNG
-    actionExportPNG = new QAction(/*QIcon(":/iconSave"),*/ tr("PNG (frame or sequence)"), this);
+    actionExportPNG = new QAction(tr("PNG (frame or sequence)"), this);
     actionExportPNG->setStatusTip(tr("Save the current illustration in the PNG file format."));
     //actionExportPNG->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_E));
     connect(actionExportPNG, SIGNAL(triggered()), this, SLOT(exportPNG()));
+*/
 
     // Preferences
     /*
@@ -1696,16 +1482,6 @@ void MainWindow::createActions()
     actionOnlineDocumentation->setStatusTip(tr("Redirects you to the online documentation of VPaint."));
     connect(actionOnlineDocumentation, SIGNAL(triggered()), this, SLOT(onlineDocumentation()));
 
-    // Getting Started
-    actionGettingStarted = new QAction(tr("Getting Started"), this);
-    actionGettingStarted->setStatusTip(tr("First-time user? This is for you! Learn the basics of VPaint from scratch, in a few minutes."));
-    connect(actionGettingStarted, SIGNAL(triggered()), this, SLOT(gettingStarted()));
-
-    // Manual
-    actionManual = new QAction(tr("User Manual"), this);
-    actionManual->setStatusTip(tr("Learn every feature of VPaint."));
-    connect(actionManual, SIGNAL(triggered()), this, SLOT(manual()));
-
     // About
     actionAbout = new QAction(tr("About VPaint"), this);
     actionAbout->setStatusTip(tr("Information about VPaint."));
@@ -1713,13 +1489,7 @@ void MainWindow::createActions()
 }
 
 
-
-/*********************************************************************
- *                            Menus
- */
-
-
-void MainWindow::createMenus()
+void MainWindow::createMenus_()
 {
     /// ---- FILE ----
     menuFile = new QMenu(tr("&File"));
@@ -1729,10 +1499,8 @@ void MainWindow::createMenus()
     menuFile->addAction(actionSave);
     menuFile->addAction(actionSaveAs);
     menuFile->addSeparator();
-    QMenu * exportMenu = menuFile->addMenu(tr("Export")); {
-        exportMenu->addAction(actionExportPNG);
-        exportMenu->addAction(actionExportSVG);
-    }
+    menuFile->addAction(actionExport);
+    menuFile->addAction(actionExportAs);
     //menuFile->addSeparator();
     //menuFile->addAction(actionPreferences);
     menuFile->addSeparator();
@@ -1783,12 +1551,12 @@ void MainWindow::createMenus()
     menuView->addAction(global()->toolModeToolBar()->toggleViewAction());
     menuView->addAction(dockTimeLine->toggleViewAction());
     menuView->addAction(dockBackgroundWidget->toggleViewAction());
-    advancedViewMenu = menuView->addMenu(tr("Advanced [Beta]")); {
-        advancedViewMenu->addAction(dockInspector->toggleViewAction());
-        advancedViewMenu->addAction(dockAdvancedSettings->toggleViewAction());
-        advancedViewMenu->addAction(dockAnimatedCycleEditor->toggleViewAction());
-        advancedViewMenu->addAction(actionOpenClose3D);
-        advancedViewMenu->addAction(actionOpenView3DSettings);
+    menuViewAdvanced = menuView->addMenu(tr("Advanced [Beta]")); {
+        menuViewAdvanced->addAction(dockInspector->toggleViewAction());
+        menuViewAdvanced->addAction(dockAdvancedSettings->toggleViewAction());
+        menuViewAdvanced->addAction(dockAnimatedCycleEditor->toggleViewAction());
+        menuViewAdvanced->addAction(actionOpenClose3D);
+        menuViewAdvanced->addAction(actionOpenView3DSettings);
     }
 
     menuBar()->addMenu(menuView);
@@ -1852,18 +1620,7 @@ void MainWindow::createMenus()
 }
 
 
-
-
-
-
-
-
-
-/*********************************************************************
- *               Dock Windows
- */
-
-void MainWindow::createDocks()
+void MainWindow::createDocks_()
 {
     setTabPosition(Qt::AllDockWidgetAreas, QTabWidget::North);
 
@@ -1937,26 +1694,13 @@ void MainWindow::createDocks()
 }
 
 
-
-
-/*********************************************************************
- *                          Status Bar
- */
-
-void MainWindow::createStatusBar()
+void MainWindow::createStatusBar_()
 {
       //statusBar()->showMessage(tr("Hello! How are you doing today?"),2000);
 }
 
 
-
-
-/*********************************************************************
- *                           Toolbars
- */
-
-
-void MainWindow::createToolbars()
+void MainWindow::createToolbars_()
 {
     global()->createToolBars();
 }

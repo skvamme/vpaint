@@ -23,11 +23,11 @@ UpdateCheckDialog::UpdateCheckDialog(QString newVersion, QWidget *parent, Qt::Wi
     setMinimumSize(500, 200);
 
     QString updateText = tr(
-            "An update is available for VPaint. The current version is %1"
-            " and the newest version of VPaint is %2.<br><br>"
+            "A new version of VPaint is available!<br><br>"
+            "To download"
+            " VPaint %1, please follow the link below:<br><br>"
             " "
-            "The latest version for your system can be downloaded"
-            " <a href=\"$DOWNLOAD_LINK\">here</a>.").arg(qApp->applicationVersion(), newVersion);
+            "<a href=\"$DOWNLOAD_LINK\">$DOWNLOAD_LINK</a>").arg(newVersion);
 
     // Insert the os specific download link into updateText
 #ifdef Q_OS_WIN32

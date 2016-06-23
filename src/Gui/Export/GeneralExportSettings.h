@@ -6,9 +6,13 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
-#include "Application.h"
+#ifndef GENERALEXPORTSETTINGS_H
+#define GENERALEXPORTSETTINGS_H
 
-int main(int argc, char ** argv)
+class GeneralExportSettings
 {
-    return Application(argc, argv).exec();
-}
+public:
+    GeneralExportSettings();
+};
+
+#endif // GENERALEXPORTSETTINGS_H

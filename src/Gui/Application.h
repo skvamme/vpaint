@@ -11,21 +11,60 @@
 
 #include <QApplication>
 
+class MainWindow;
+class ExportManager;
+
+class Application;
+#if defined(qApp)
+#undef qApp
+#endif
+#define qApp (static_cast<Application *>(QCoreApplication::instance()))
+
+/// \class Application
+/// \brief A class that extends QApplication with some custom behaviour.
+///
 class Application : public QApplication
 {
     Q_OBJECT
 
 public:
-    Application(int &argc, char **argv);
+    /// Create the Application. There can only be one Application.
+    ///
+    Application(int & argc, char ** argv);
 
-    bool event(QEvent* event);
-    void emitOpenFileRequest();
+    /// Destroy the Application.
+    ///
+    ~Application();
+
+    /// Returns the MainWindow of the Application.
+    ///
+    MainWindow * mainWindow() const;
+
+    /// Returns the ExportManager of the Application.
+    ///
+    ExportManager * exportManager() const;
+
+    /// Reimplements the behaviour of a few event types.
+    ///
+    bool event(QEvent* event) override;
 
 signals:
+    /// Signal emitted whenever there is an external request to open a file.
+    /// This is only necessary for MacOS X, see QFileOpenEvent.
+    ///
     void openFileRequested(const QString & filename);
 
+private slots:
+    void emitOpenFileRequest_();
+
 private:
-    QString startPath_;
+    void createMainWindow_();
+    void destroyMainWindow_();
+
+private:
+    MainWindow * mainWindow_;
+    ExportManager * exportManager_;
+    QString openFileRequestFilename_;
 };
 
 #endif // APPLICATION_H

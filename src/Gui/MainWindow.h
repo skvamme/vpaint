@@ -29,9 +29,9 @@ class XmlStreamWriter;
 class XmlStreamReader;
 class QTextStream;
 class EditCanvasSizeDialog;
-class ExportPngDialog;
 class AboutDialog;
 class BackgroundWidget;
+class ExportManager;
 
 namespace VectorAnimationComplex
 {
@@ -51,6 +51,7 @@ public:
     ~MainWindow();
 
     Scene * scene() const;
+    MultiView * multiView() const;
     View * activeView() const;
     View * hoveredView() const;
     Timeline * timeline() const;
@@ -60,9 +61,8 @@ public:
 
 protected:
     void closeEvent(QCloseEvent * event);
-    void keyPressEvent(QKeyEvent *event);
-    void keyReleaseEvent(QKeyEvent *event);
-    bool eventFilter(QObject *object, QEvent *event);
+    void keyPressEvent(QKeyEvent * event); // XXX is this necessary?
+    void keyReleaseEvent(QKeyEvent * event); // XXX is this necessary?
 
 public slots:
     // ---- update what is displayed on screen ----
@@ -72,23 +72,17 @@ public slots:
     void updateObjectProperties();
     void editAnimatedCycle(VectorAnimationComplex::InbetweenFace * inbetweenFace, int indexCycle);
 
-    void about();
-    void open_(const QString & filePath); // XXX public because used in main.cpp. Should probably be refactored.
 
-private slots:
+public slots:
     // ---- File ----
     void newDocument();
     void open();
     bool save();
-    void autosave();
     bool saveAs();
-    bool exportSVG();
-    bool exportPNG();
-    bool acceptExportPNG();
-    bool rejectExportPNG();
+    bool exportDocument();
+    bool exportAs();
 
     // ---- Edit ----
-    void addToUndoStack();
     void undo();
     void redo();
     void cut();
@@ -129,26 +123,65 @@ private slots:
 
     // ---- Help ----
     void onlineDocumentation();
-    void gettingStarted();
-    void manual();
-    
-private:
-    // ---------- initializations --------------
-    void createActions();
-    void createToolbars();
-    void createStatusBar();
-    void createDocks();
-    void createMenus();
+    void about();
 
-    // --------- Other properties and widgets --------
-    // Scene and View
+private slots:
+    void onOpenFileRequested_(const QString & filename);
+    void addToUndoStack_();
+
+private:
+    void createActions_();
+    void createToolbars_();
+    void createStatusBar_();
+    void createDocks_();
+    void createMenus_();
+
+private:
+    // --------- Scene (XXX should be factored out) ----------
+
     Scene * scene_;
+
+    // --------- Child widgets --------
+
+    // Views
     MultiView * multiView_;
-    // Help
+    View3D * view3D_;
+
+    // Timeline
+    Timeline * timeline_;
+    QDockWidget * dockTimeLine;
+
+    // Selection info widget
+    SelectionInfoWidget * selectionInfo_;
+
+    // Edit Canvas Size
+    EditCanvasSizeDialog * editCanvasSizeDialog_;
+
+    // About dialog
     AboutDialog * aboutDialog_;
-    bool showAboutDialogAtStartup_;
-    QTextBrowser * gettingStarted_;
-    QTextBrowser * userManual_;
+
+    // Inspector
+    ObjectPropertiesWidget * inspector;
+    QDockWidget * dockInspector;
+
+    // Advanced settings widget
+    QDockWidget * dockAdvancedSettings;
+
+    // Animated cycle editor
+    QDockWidget * dockAnimatedCycleEditor;
+    AnimatedCycleWidget * animatedCycleEditor;
+
+    // Background editor
+    BackgroundWidget * backgroundWidget;
+    QDockWidget * dockBackgroundWidget;
+
+
+    // ---------- XXX functionality that should be factored out ----------
+
+    // Should be factored out from MainWindow to Application.
+    // Within Application, should be delegated to relevant classes.
+    // For instance: DocumentManager should implement open(), save(), etc.
+
     // Undo/Redo
     void clearUndoStack_();
     void resetUndoStack_();
@@ -157,133 +190,115 @@ private:
     QList<UndoItem> undoStack_;
     int undoIndex_;
     int savedUndoIndex_;
-    // I/O
+
+    // Save and Load
     QString fileHeader_;
     QString documentFilePath_;
-    QString autosaveFilename_;
-    QTimer autosaveTimer_;
-    int autosaveIndex_;
-    bool autosaveOn_;
-    QDir autosaveDir_;
     bool isNewDocument_() const;
     bool isModified_() const;
     void setUnmodified_();
     void updateWindowTitle_();
     void setDocumentFilePath_(const QString & filePath);
+    void onAboutToClose_();
+    void newDocument_();
+    void open_();
+    void open_(const QString & filePath);
     bool maybeSave_();
     bool save_(const QString & filePath, bool relativeRemap = false);
-    bool doExportSVG(const QString & filename);
-    bool doExportPNG(const QString & filename);
-    void read_DEPRECATED(QTextStream & in);
-    void write_DEPRECATED(QTextStream & out);
     void read(XmlStreamReader & xml);
     void write(XmlStreamWriter & xml);
-    void autosaveBegin();
-    void autosaveEnd();
+
+    // Export
+    ExportManager * exportManager_;
+
     // Copy-pasting
     VectorAnimationComplex::VAC * clipboard_;
-    // 3D view
-    View3D * view3D_;
-    // timeline
-    Timeline * timeline_;
-    // Selection info
-    SelectionInfoWidget * selectionInfo_;
-    // Edit Canvas Size
-    ExportPngDialog * exportPngDialog_;
-    EditCanvasSizeDialog * editCanvasSizeDialog_;
-    bool exportPngCanvasWasVisible_;
-    QString exportPngFilename_;
-    bool exportingPng_;
 
     // --------- Menus and actions --------
+
     // FILE
     QMenu * menuFile;
-      QAction * actionNew;
-      QAction * actionOpen;
-      QAction * actionSave;
-      QAction * actionSaveAs;
-      QAction * actionPreferences;
-      QAction * actionExportSVG;
-      QAction * actionExportPNG;
-      QAction * actionQuit;
+    QAction * actionNew;
+    QAction * actionOpen;
+    QAction * actionSave;
+    QAction * actionSaveAs;
+    QAction * actionExport;
+    QAction * actionExportAs;
+    QAction * actionQuit;
+
     // EDIT
     QMenu * menuEdit;
-      QAction * actionUndo;
-      QAction * actionRedo;
-      QAction * actionCut;
-      QAction * actionCopy;
-      QAction * actionPaste;
-      QAction * actionSmartDelete;
-      QAction * actionHardDelete;
-      QAction * actionTest;
+    QAction * actionUndo;
+    QAction * actionRedo;
+    QAction * actionCut;
+    QAction * actionCopy;
+    QAction * actionPaste;
+    QAction * actionSmartDelete;
+    QAction * actionHardDelete;
+    QAction * actionTest;
+
     // VIEW
     QMenu * menuView;
-      QAction * actionZoomIn;
-      QAction * actionZoomOut;
-      QAction * actionShowCanvas;
-      QAction * actionEditCanvasSize;
-      QAction * actionFitAllInWindow;
-      QAction * actionFitSelectionInWindow;
-      QAction * actionDisplayModeNormal;
-      QAction * actionDisplayModeNormalOutline;
-      QAction * actionDisplayModeOutline;
-      QAction * actionOnionSkinning;
-      QAction * actionToggleOutline;
-      QAction * actionToggleOutlineOnly;
-      QAction * actionOpenView3DSettings;
-      QAction * actionOpenClose3D;
-      QAction * actionSplitVertical;
-      QAction * actionSplitHorizontal;
-      QAction * actionSplitClose;
-      QAction * actionSplitOne;
-      QMenu * advancedViewMenu;
+    QMenu * menuViewAdvanced;
+    QAction * actionZoomIn;
+    QAction * actionZoomOut;
+    QAction * actionShowCanvas;
+    QAction * actionEditCanvasSize;
+    QAction * actionFitAllInWindow;
+    QAction * actionFitSelectionInWindow;
+    QAction * actionDisplayModeNormal;
+    QAction * actionDisplayModeNormalOutline;
+    QAction * actionDisplayModeOutline;
+    QAction * actionOnionSkinning;
+    QAction * actionToggleOutline;
+    QAction * actionToggleOutlineOnly;
+    QAction * actionOpenView3DSettings;
+    QAction * actionOpenClose3D;
+    QAction * actionSplitVertical;
+    QAction * actionSplitHorizontal;
+    QAction * actionSplitClose;
+    QAction * actionSplitOne;
+
     // SELECTION
     QMenu * menuSelection;
-      QAction * actionSelectAll;
-      QAction * actionDeselectAll;
-      QAction * actionInvertSelection;
-      QAction * actionSelectConnected;
-      QAction * actionSelectClosure;
-      QAction * actionSelectVertices;
-      QAction * actionSelectEdges;
-      QAction * actionSelectFaces;
-      QAction * actionDeselectVertices;
-      QAction * actionDeselectEdges;
-      QAction * actionDeselectFaces;
+    QAction * actionSelectAll;
+    QAction * actionDeselectAll;
+    QAction * actionInvertSelection;
+    QAction * actionSelectConnected;
+    QAction * actionSelectClosure;
+    QAction * actionSelectVertices;
+    QAction * actionSelectEdges;
+    QAction * actionSelectFaces;
+    QAction * actionDeselectVertices;
+    QAction * actionDeselectEdges;
+    QAction * actionDeselectFaces;
+
     // DEPTH
     QMenu * menuDepth;
-      QAction * actionRaise;
-      QAction * actionLower;
-      QAction * actionRaiseToTop;
-      QAction * actionLowerToBottom;
-      QAction * actionAltRaise;
-      QAction * actionAltLower;
-      QAction * actionAltRaiseToTop;
-      QAction * actionAltLowerToBottom;
+    QAction * actionRaise;
+    QAction * actionLower;
+    QAction * actionRaiseToTop;
+    QAction * actionLowerToBottom;
+    QAction * actionAltRaise;
+    QAction * actionAltLower;
+    QAction * actionAltRaiseToTop;
+    QAction * actionAltLowerToBottom;
+
     // ANIMATION
     QMenu * menuAnimation;
-      QAction * actionInbetweenSelection;
-      QAction * actionKeyframeSelection;
-      QAction * actionMotionPaste;
-      QAction * actionCreateInbetweenFace;
+    QAction * actionInbetweenSelection;
+    QAction * actionKeyframeSelection;
+    QAction * actionMotionPaste;
+    QAction * actionCreateInbetweenFace;
+
     // PLAYBACK
-      QMenu * menuPlayback;
+    QMenu * menuPlayback;
+
     // HELP
     QMenu * menuHelp;
-      QAction * actionOnlineDocumentation;
-      QAction * actionGettingStarted;
-      QAction * actionManual;
-      QAction * actionAbout;
-
-    // Docks
-    QDockWidget * dockInspector;
-    ObjectPropertiesWidget * inspector;
-    QDockWidget * dockTimeLine;
-    QDockWidget * dockAdvancedSettings;
-    QDockWidget * dockAnimatedCycleEditor;
-    AnimatedCycleWidget * animatedCycleEditor;
-    BackgroundWidget * backgroundWidget;
-    QDockWidget * dockBackgroundWidget;
+    QAction * actionOnlineDocumentation;
+    QAction * actionCheckForUpdates;
+    QAction * actionAbout;
 };
 
 #endif

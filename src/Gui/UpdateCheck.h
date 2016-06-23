@@ -23,13 +23,13 @@ class UpdateCheck: public QObject
     Q_OBJECT
 
 public:
-    UpdateCheck(QWidget * parent = 0);
-    virtual ~UpdateCheck();
+    UpdateCheck(QWidget * dialogParent = nullptr, QObject * parent = nullptr);
 
-    Version versionChecked() const;
-    Version latestVersion() const;
-    void showWhenReady();
+public slots:
     void checkForUpdates();
+
+signals:
+    void finished();
 
 private slots:
     void requestFinished_();
@@ -39,11 +39,10 @@ private:
     QNetworkAccessManager * networkManager_;
     QNetworkReply * reply_;
 
-    QWidget * parent_;
+    QWidget * dialogParent_;
     UpdateCheckDialog * dialog_;
 
-    Version versionToCheck_, latestVersion_;
-    bool isReady_;
+    Version checkVersion_, latestVersion_;
 };
 
 #endif // UPDATECHECK_H

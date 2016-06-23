@@ -188,7 +188,21 @@ HEADERS += MainWindow.h \
     Version.h \
     UpdateCheck.h \
     VectorAnimationComplex/BoundingBox.h \
-    VectorAnimationComplex/TransformTool.h
+    VectorAnimationComplex/TransformTool.h \
+    PngExport/PngExportData.h \
+    FrameRange.h \
+    PngExport/PngExportDialog.h \
+    PngExport/PngExporter.h \
+    Export/ExportManager.h \
+    Export/GeneralExportSettings.h \
+    Export/FileSpecificExportSettings.h \
+    Export/PngExportSettings.h \
+    Export/SvgExportSettings.h \
+    Export/PngExportWidget.h \
+    Export/GeneralExportWidget.h \
+    Export/SvgExportWidget.h \
+    Export/ExportDialog.h \
+    Export/ExportSettings.h
 
 SOURCES += main.cpp \
     SaveAndLoad.cpp \
@@ -278,4 +292,18 @@ SOURCES += main.cpp \
     Version.cpp \
     UpdateCheck.cpp \
     VectorAnimationComplex/BoundingBox.cpp \
-    VectorAnimationComplex/TransformTool.cpp
+    VectorAnimationComplex/TransformTool.cpp \
+    PngExport/PngExportData.cpp \
+    FrameRange.cpp \
+    PngExport/PngExportDialog.cpp \
+    PngExport/PngExporter.cpp \
+    Export/ExportManager.cpp \
+    Export/GeneralExportSettings.cpp \
+    Export/FileSpecificExportSettings.cpp \
+    Export/PngExportSettings.cpp \
+    Export/SvgExportSettings.cpp \
+    Export/PngExportWidget.cpp \
+    Export/GeneralExportWidget.cpp \
+    Export/SvgExportWidget.cpp \
+    Export/ExportDialog.cpp \
+    Export/ExportSettings.cpp

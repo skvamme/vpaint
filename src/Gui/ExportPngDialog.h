@@ -11,6 +11,7 @@
 
 #include <QDialog>
 
+class QLineEdit;
 class QCheckBox;
 class QSpinBox;
 class QDoubleSpinBox;
@@ -59,6 +60,9 @@ private slots:
 
 private:
     Scene * scene_;
+
+    QLineEdit * filenameLineEdit_;
+    QPushButton * filenameBrowseButton_;
 
     QDoubleSpinBox * topSpinBox_;
     QDoubleSpinBox * leftSpinBox_;

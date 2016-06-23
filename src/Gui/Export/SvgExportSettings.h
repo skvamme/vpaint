@@ -6,9 +6,13 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
-#include "Application.h"
+#ifndef SVGEXPORTSETTINGS_H
+#define SVGEXPORTSETTINGS_H
 
-int main(int argc, char ** argv)
+class SvgExportSettings
 {
-    return Application(argc, argv).exec();
-}
+public:
+    SvgExportSettings();
+};
+
+#endif // SVGEXPORTSETTINGS_H

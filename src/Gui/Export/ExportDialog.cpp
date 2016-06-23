@@ -6,9 +6,24 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
-#include "Application.h"
+#include "ExportDialog.h"
 
-int main(int argc, char ** argv)
+ExportDialog::ExportDialog(
+        Scene * scene,
+        MultiView * multiView,
+        ExportSettings * exportSettings,
+        QWidget * parent) :
+
+    QDialog(parent),
+
+    scene_(scene),
+    multiView_(multiView),
+    exportSettings_(exportSettings)
 {
-    return Application(argc, argv).exec();
+
+}
+
+ExportSettings * ExportDialog::exportSettings() const
+{
+    return exportSettings_;
 }

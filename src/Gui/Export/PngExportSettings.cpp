@@ -6,9 +6,9 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
-#include "Application.h"
+#include "PngExportSettings.h"
 
-int main(int argc, char ** argv)
+PngExportSettings::PngExportSettings()
 {
-    return Application(argc, argv).exec();
+
 }

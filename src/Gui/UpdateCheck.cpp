@@ -16,35 +16,33 @@
 #include "Global.h"
 #include "UpdateCheckDialog.h"
 
-UpdateCheck::UpdateCheck(QWidget * parent) :
-    reply_(0),
-    isReady_(false)
+UpdateCheck::UpdateCheck(QWidget * dialogParent, QObject * parent) :
+    QObject(parent),
+    reply_(nullptr)
 {
-    // Initialize variables
-    versionToCheck_ = global()->settings().checkVersion();
-    if(versionToCheck_ < Version(qApp->applicationVersion()) && versionToCheck_ != Version()) {
-        global()->settings().setCheckVersion(Version(qApp->applicationVersion()));
-        versionToCheck_ = global()->settings().checkVersion();
+    // Set dialog's parent
+    dialogParent_ = dialogParent;
+
+    // Get checkVersion as stored in settings
+    checkVersion_ = global()->settings().checkVersion();
+
+    // Make sure that checkVersion >= appVersion.
+    //
+    // The case checkVersion < appVersion occurs if the user installs a
+    // new version by himself, without having been notified of the new version
+    // from within the application.
+    //
+    Version appVersion        = Version(qApp->applicationVersion());
+    bool newerAppVersion      = (checkVersion_ <  appVersion);
+    bool neverCheckForUpdates = (checkVersion_ == Version());
+    if (newerAppVersion && !neverCheckForUpdates)
+    {
+        global()->settings().setCheckVersion(appVersion);
+        checkVersion_ = appVersion;
     }
-    networkManager_ = new QNetworkAccessManager();
-    parent_ = parent;
 
-    checkForUpdates();
-}
-
-UpdateCheck::~UpdateCheck()
-{
-    delete networkManager_;
-}
-
-Version UpdateCheck::versionChecked() const
-{
-    return versionToCheck_;
-}
-
-Version UpdateCheck::latestVersion() const
-{
-    return latestVersion_;
+    // Create network manager
+    networkManager_ = new QNetworkAccessManager(this);
 }
 
 void UpdateCheck::checkForUpdates()
@@ -53,7 +51,7 @@ void UpdateCheck::checkForUpdates()
     if(reply_) return;
 
     // Return if the user has asked not to check for updates
-    if(versionToCheck_ == Version()) return;
+    if(checkVersion_ == Version()) return;
 
     // Set query
     QUrlQuery urlQuery;
@@ -73,9 +71,6 @@ void UpdateCheck::checkForUpdates()
 
 void UpdateCheck::requestFinished_()
 {
-    // Return if not ready to display dialog
-    if(!isReady_) return;
-
     // Check for errors
     if(reply_->error() != QNetworkReply::NoError)
     {
@@ -87,10 +82,10 @@ void UpdateCheck::requestFinished_()
     latestVersion_ = Version(QString(reply_->readAll()));
 
     // Compare versions
-    if(versionToCheck_ < latestVersion_)
+    if(checkVersion_ < latestVersion_)
     {
         // Create dialog with latest version
-        dialog_ = new UpdateCheckDialog(latestVersion_.toString(), parent_, Qt::Dialog);
+        dialog_ = new UpdateCheckDialog(latestVersion_.toString(), dialogParent_, Qt::Dialog);
         dialog_->setAttribute(Qt::WA_DeleteOnClose);
         connect(dialog_, SIGNAL(accepted()), this, SLOT(updateSettings_()));
 
@@ -98,29 +93,19 @@ void UpdateCheck::requestFinished_()
         dialog_->exec();
     }
 
+    // Delete reply
     reply_->deleteLater();
-
-    isReady_ = false;
+    reply_ = nullptr;
 }
 
-void UpdateCheck::showWhenReady()
+void UpdateCheck::updateSettings_()
 {
-    if(reply_ && reply_->isFinished())
-    {
-        isReady_ = true;
-        requestFinished_();
-    }
-    else {
-        isReady_ = true;
-    }
-}
-
-void UpdateCheck::updateSettings_() {
     if(dialog_->stopChecking())
     {
         global()->settings().setCheckVersion(Version());
     }
-    else if(dialog_->skipVersion()) {
+    else if(dialog_->skipVersion())
+    {
         global()->settings().setCheckVersion(latestVersion_);
     }
 }
