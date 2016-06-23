@@ -8,6 +8,11 @@
 
 #include "ExportDialog.h"
 
+#include "GeneralExportWidget.h"
+
+#include <QDialogButtonBox>
+#include <QVBoxLayout>
+
 ExportDialog::ExportDialog(
         Scene * scene,
         MultiView * multiView,
@@ -18,12 +23,47 @@ ExportDialog::ExportDialog(
 
     scene_(scene),
     multiView_(multiView),
-    exportSettings_(exportSettings)
-{
+    exportSettings_(exportSettings),
 
+    exportText_("Export")
+{
+    // Create general export widget
+    generalExportWidget_ = new GeneralExportWidget(this);
+
+    // Create file-specific export widget
+    fileSpecificExportWidget_ = new QWidget(this);
+
+    // Dialog button box
+    QDialogButtonBox * buttonBox = new QDialogButtonBox(QDialogButtonBox::Cancel);
+    buttonBox->addButton(exportText(), QDialogButtonBox::AcceptRole);
+    connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
+    connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
+
+    // Main layout
+    QVBoxLayout * layout = new QVBoxLayout();
+    layout->addWidget(generalExportWidget_);
+    layout->addWidget(fileSpecificExportWidget_);
+    layout->addWidget(buttonBox);
+    setLayout(layout);
+
+    // Window title
+    setWindowTitle(exportText() + " Settings");
+
+    // Set minimimum size
+    setMinimumSize(400, 400);
 }
 
 ExportSettings * ExportDialog::exportSettings() const
 {
     return exportSettings_;
+}
+
+void ExportDialog::setExportText(const QString & exportText)
+{
+    exportText_ = exportText;
+}
+
+QString ExportDialog::exportText() const
+{
+    return exportText_;
 }

@@ -8,7 +8,8 @@
 
 #include "GeneralExportWidget.h"
 
-GeneralExportWidget::GeneralExportWidget()
+GeneralExportWidget::GeneralExportWidget(QWidget * parent) :
+    QWidget(parent)
 {
 
 }

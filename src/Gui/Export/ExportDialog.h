@@ -14,6 +14,7 @@
 class Scene;
 class MultiView;
 class ExportSettings;
+class GeneralExportWidget;
 
 /// \class ExportDialog
 /// \brief A dialog to change export settings, and launch an export.
@@ -126,11 +127,23 @@ public:
     ///
     ExportSettings * exportSettings() const;
 
+    /// Sets the text that appears on the "Export" button. Default is "Export".
+    ///
+    void setExportText(const QString & exportText);
+
+    /// Returns the text that appears on the "Export" button. Default is "Export".
+    ///
+    QString exportText() const;
 
 private:
     Scene * scene_;
     MultiView * multiView_;
     ExportSettings * exportSettings_;
+
+    QString exportText_;
+
+    GeneralExportWidget * generalExportWidget_;
+    QWidget * fileSpecificExportWidget_;
 };
 
 #endif // EXPORTDIALOG_H

@@ -9,10 +9,16 @@
 #ifndef GENERALEXPORTSETTINGSWIDGET_H
 #define GENERALEXPORTSETTINGSWIDGET_H
 
-class GeneralExportWidget
+#include <QWidget>
+
+class GeneralExportWidget: public QWidget
 {
+private:
+    Q_OBJECT
+    Q_DISABLE_COPY(GeneralExportWidget)
+
 public:
-    GeneralExportWidget();
+    GeneralExportWidget(QWidget * parent = nullptr);
 };
 
 #endif // GENERALEXPORTSETTINGSWIDGET_H
