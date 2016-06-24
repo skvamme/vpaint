@@ -9,6 +9,7 @@
 #include "FormLayout.h"
 
 #include <QLabel>
+#include <QEvent>
 
 FormLayout::FormLayout() :
     QGridLayout()
@@ -50,6 +51,9 @@ void FormLayout::addRow(QWidget * label, QWidget * field)
 
     // Add field
     addWidget(field, i, 1);
+
+    // Monitor hide() and show()
+    field->installEventFilter(this);
 }
 
 void FormLayout::addRow(const QString & labelText, QWidget * field)
@@ -70,15 +74,80 @@ void FormLayout::addRow(QWidget * field)
 
 QWidget * FormLayout::addRow(QWidget * label, QLayout * field)
 {
-    return nullptr;
+    QWidget * widget = createWidgetFromLayout_(field);
+    addRow(label, widget);
+    return widget;
 }
 
 QWidget * FormLayout::addRow(const QString & labelText, QLayout * field)
 {
-    return nullptr;
+    QWidget * widget = createWidgetFromLayout_(field);
+    addRow(labelText, widget);
+    return widget;
 }
 
 QWidget * FormLayout::addRow(QLayout * field)
 {
-    return nullptr;
+    QWidget * widget = createWidgetFromLayout_(field);
+    addRow(widget);
+    return widget;
+}
+
+QWidget * FormLayout::createWidgetFromLayout_(QLayout * field)
+{
+    QWidget * widget = new QWidget(tempParent_);
+    field->setMargin(0);
+    widget->setLayout(field);
+    return widget;
+}
+
+QWidget * FormLayout::labelForField(QWidget * field)
+{
+    // Get field row
+    int fieldRow, fieldColumn, fieldRowSpan, fieldColumnSpan;
+    int index = indexOf(field);
+    getItemPosition(index, &fieldRow, &fieldColumn, &fieldRowSpan, &fieldColumnSpan);
+
+    // Get label item (nullptr if empty label)
+    int labelRow = fieldRow;
+    int labelColumn = 0;
+    QLayoutItem * item = itemAtPosition(labelRow, labelColumn);
+
+    // Convert to widget (nullptr if empty label, or not a widget)
+    QWidget * label = item ? item->widget() : nullptr;
+
+    return label;
+}
+
+bool FormLayout::eventFilter(QObject * watched, QEvent * event)
+{
+    // Read very carefully the documentation of isHidden() before
+    // attempting to change this code. In particular, isHidden()
+    // is not the contrary of isVisible().
+
+    const bool isShow = (event->type() == QEvent::Show);
+    const bool isHide = (event->type() == QEvent::HideToParent);
+
+    if (isShow || isHide)
+    {
+        QWidget * field = static_cast<QWidget *>(watched);
+        if (field)
+        {
+            QWidget * label = labelForField(field);
+            if (label)
+            {
+                if (isShow && label->isHidden())
+                {
+                    label->show();
+                }
+                else if (isHide)
+                {
+                    label->hide();
+                }
+            }
+        }
+    }
+
+    // standard event processing
+    return QObject::eventFilter(watched, event);
 }

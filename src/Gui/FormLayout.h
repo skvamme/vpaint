@@ -23,8 +23,8 @@ class QLayout;
 /// or margin issues).
 ///
 /// Therefore, this class implement functionality similar to QFormLayout,
-/// but based on QGridLayout instead, and automatically hiding a row
-/// whenever the row's widget is hidden.
+/// but based on QGridLayout instead, and automatically hiding a row's label
+/// whenever the row's field is hidden.
 ///
 /// Usage:
 /// \code
@@ -33,10 +33,12 @@ class QLayout;
 /// layout->addRow("Row 1:", widget1);
 /// layout->addRow("Row 2:", widget2);
 /// layout->addRow("Row 3:", widget3);
+/// QWidget * widget4 = layout->addRow("Row 4:", layout4);
 /// setLayout(layout);
 ///
-/// // Hide both widget2, and its associated label "Row 2:"
-/// widget1->hide();
+/// // Hide widget2, layout4, and their associated labels
+/// widget2->hide();
+/// widget4->hide();
 /// \endcode
 ///
 class FormLayout: public QGridLayout
@@ -91,8 +93,19 @@ public:
     ///
     QWidget * addRow(QLayout * field);
 
+    /// Returns the label associated with the given \p field.
+    ///
+    QWidget * labelForField(QWidget * field);
+
+    /// Reimplements eventFilter to watch for QEvent::Hide and QEvent::Show
+    /// events passed to managed fields, and accordingly hide or show their
+    /// corresponding labels.
+    ///
+    bool eventFilter(QObject * watched, QEvent * event) override;
+
 private:
     void init_();
+    QWidget * createWidgetFromLayout_(QLayout * field);
 
 private:
     // Temporary parent of widgets created by this FormLayout (e.g., labels,
