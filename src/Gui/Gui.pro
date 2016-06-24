@@ -19,6 +19,7 @@ TARGET = VPaint
 CONFIG += qt c++11
 QT += opengl network
 
+
 # App version
 MYVAR = 1.6
 VERSION = $$MYVAR
@@ -203,7 +204,8 @@ HEADERS += MainWindow.h \
     Export/SvgExportWidget.h \
     Export/ExportDialog.h \
     Export/ExportSettings.h \
-    QVBoxHeading.h
+    QVBoxHeading.h \
+    FormLayout.h
 
 SOURCES += main.cpp \
     SaveAndLoad.cpp \
@@ -308,4 +310,5 @@ SOURCES += main.cpp \
     Export/SvgExportWidget.cpp \
     Export/ExportDialog.cpp \
     Export/ExportSettings.cpp \
-    QVBoxHeading.cpp
+    QVBoxHeading.cpp \
+    FormLayout.cpp

@@ -8,6 +8,7 @@
 
 #include "ExportDialog.h"
 
+#include "ExportSettings.h"
 #include "GeneralExportWidget.h"
 #include "QVBoxHeading.h"
 
@@ -33,7 +34,7 @@ ExportDialog::ExportDialog(
     QVBoxHeading * fileSpecificSettingsHeading = new QVBoxHeading("Specific Settings");
 
     // Create general export widget
-    generalExportWidget_ = new GeneralExportWidget(this);
+    generalExportWidget_ = new GeneralExportWidget(exportSettings_->generalExportSettings(), this);
 
     // Create file-specific export widget
     fileSpecificExportWidget_ = new QWidget(this);

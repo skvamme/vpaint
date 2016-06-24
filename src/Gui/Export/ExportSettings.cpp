@@ -8,7 +8,28 @@
 
 #include "ExportSettings.h"
 
+#include "GeneralExportSettings.h"
+#include "FileSpecificExportSettings.h"
+
 ExportSettings::ExportSettings()
 {
+    generalExportSettings_ = new GeneralExportSettings();
+    fileSpecificExportSettings_ = new FileSpecificExportSettings();
+}
 
+ExportSettings::~ExportSettings()
+{
+    // XXX should be refactored.
+    delete generalExportSettings_;
+    delete fileSpecificExportSettings_;
+}
+
+GeneralExportSettings * ExportSettings::generalExportSettings() const
+{
+    return generalExportSettings_;
+}
+
+FileSpecificExportSettings * ExportSettings::fileSpecificExportSettings() const
+{
+    return fileSpecificExportSettings_;
 }

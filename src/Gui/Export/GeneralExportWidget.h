@@ -11,6 +11,9 @@
 
 #include <QWidget>
 
+class GeneralExportSettings;
+class QComboBox;
+
 class GeneralExportWidget: public QWidget
 {
 private:
@@ -18,7 +21,13 @@ private:
     Q_DISABLE_COPY(GeneralExportWidget)
 
 public:
-    GeneralExportWidget(QWidget * parent = nullptr);
+    GeneralExportWidget(GeneralExportSettings * settings, QWidget * parent = nullptr);
+
+private:
+    GeneralExportSettings * settings_;
+
+    QComboBox * exportTypeComboBox_;
+    QComboBox * fileFormatComboBox_;
 };
 
 #endif // GENERALEXPORTSETTINGSWIDGET_H

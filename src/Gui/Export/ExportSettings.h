@@ -9,10 +9,21 @@
 #ifndef EXPORTSETTINGS_H
 #define EXPORTSETTINGS_H
 
+class GeneralExportSettings;
+class FileSpecificExportSettings;
+
 class ExportSettings
 {
 public:
     ExportSettings();
+    ~ExportSettings();
+
+    GeneralExportSettings * generalExportSettings() const;
+    FileSpecificExportSettings * fileSpecificExportSettings() const;
+
+private:
+    GeneralExportSettings * generalExportSettings_;
+    FileSpecificExportSettings * fileSpecificExportSettings_;
 };
 
 #endif // EXPORTSETTINGS_H

@@ -8,7 +8,18 @@
 
 #include "GeneralExportSettings.h"
 
-GeneralExportSettings::GeneralExportSettings()
+GeneralExportSettings::GeneralExportSettings() :
+    exportType_(ExportType::Image)
 {
 
+}
+
+void GeneralExportSettings::setExportType(ExportType exportType)
+{
+    exportType_ = exportType;
+}
+
+GeneralExportSettings::ExportType GeneralExportSettings::exportType() const
+{
+    return exportType_;
 }
