@@ -47,9 +47,17 @@ void FormLayout::addRow(QWidget * label, QWidget * field)
 
     // Add label if non-empty
     if (label)
+    {
+        QSizePolicy policy = label->sizePolicy();
+        policy.setHorizontalPolicy(QSizePolicy::Minimum);
+        label->setSizePolicy(policy);
         addWidget(label, i, 0);
+    }
 
     // Add field
+    QSizePolicy policy = field->sizePolicy();
+    policy.setHorizontalPolicy(QSizePolicy::MinimumExpanding);
+    field->setSizePolicy(policy);
     addWidget(field, i, 1);
 
     // Monitor hide() and show()

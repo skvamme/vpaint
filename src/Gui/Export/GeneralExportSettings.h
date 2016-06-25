@@ -11,6 +11,12 @@
 
 #include "FrameRange.h"
 
+#include <QDir>
+#include <QStringList>
+
+/// \class GeneralExportSettings
+/// \brief A class storing general export settings.
+///
 class GeneralExportSettings
 {
 public:
@@ -110,8 +116,147 @@ public:
     ///
     DoubleFrameRange frameRange() const;
 
+    /// \enum FpsType
+    /// \brief This enum contains the available values for
+    /// GeneralExportSettings::fpsType().
+    ///
+    enum class FpsType: char
+    {
+        AsAuthored = 0,
+        CustomFps
+    };
+
+    /// Sets the fps type.
+    ///
+    void setFpsType(FpsType fpsType);
+
+    /// Returns the fps type.
+    ///
+    FpsType fpsType() const;
+
+    /// Sets the fps.
+    ///
+    void setFps(int fps);
+
+    /// Returns the fps.
+    ///
+    int fps() const;
+
+    /// Sets the export directory.
+    ///
+    void setDir(const QDir & dir);
+
+    /// Returns the export directory.
+    ///
+    QDir dir() const;
+
+    /// Sets the export file name (only applies to single-frame export).
+    ///
+    void setFileName(const QString & fileName);
+
+    /// Returns the export file name (only applies to single-frame export).
+    ///
+    QString fileName() const;
+
+    /// Sets the export file pattern (only applies to frame-range export).
+    ///
+    void setFilePattern(const QString & filePattern);
+
+    /// Returns the export file pattern (only applies to frame-range export).
+    ///
+    QString filePattern() const;
+
+    /// \enum StartNumberType
+    /// \brief This enum contains the available values for
+    /// GeneralExportSettings::fileStartNumberType().
+    ///
+    enum class FileStartNumberType: char
+    {
+        FirstFrame = 0,
+        CustomNumber
+    };
+
+    /// Sets the file start number type.
+    ///
+    void setFileStartNumberType(FileStartNumberType fileStartNumberType);
+
+    /// Returns the file start number type.
+    ///
+    FileStartNumberType fileStartNumberType() const;
+
+    /// Sets the file start number.
+    ///
+    void setFileStartNumber(int fileStartNumber);
+
+    /// Returns the file start number.
+    ///
+    int fileStartNumber() const;
+
+    /// Sets the file number increment.
+    ///
+    void setFileNumberIncrement(int fileNumberIncrement);
+
+    /// Returns the file number increment.
+    ///
+    int fileNumberIncrement() const;
+
+    /// Sets whether file numbers use leading zeros.
+    ///
+    void setFileNumbersUseLeadingZeros(bool fileNumbersUseLeadingZeros);
+
+    /// Returns whether file numbers use leading zeros.
+    ///
+    bool fileNumbersUseLeadingZeros() const;
+
+    /// \enum FileNumbersDigitNumType
+    /// \brief This enum contains the available values for
+    /// GeneralExportSettings::fileNumbersDigitNumType().
+    ///
+    enum class FileNumbersDigitNumType: char
+    {
+        Auto = 0,
+        Custom
+    };
+
+    /// Sets the file numbers' number of digits type.
+    ///
+    void setFileNumbersDigitNumType(FileNumbersDigitNumType fileNumbersDigitNumType);
+
+    /// Returns the file numbers' number of digits type.
+    ///
+    FileNumbersDigitNumType fileNumbersDigitNumType() const;
+
+    /// Sets the file numbers' number of digits.
+    ///
+    void setFileNumbersDigitNum(int fileNumbersDigitNum);
+
+    /// Returns the file numbers' number of digits.
+    ///
+    int fileNumbersDigitNum() const;
+
+    /// Returns the file names based on the frame range, the file pattern, and the
+    /// file number settings (frame-range).
+    ///
+    QStringList fileNames() const;
+
 private:
     ExportType exportType_;
+    FileFormat fileFormat_;
+    FrameType frameType_;
+    DoubleFrame frame_;
+    FrameRangeType frameRangeType_;
+    DoubleFrameRange frameRange_;
+    FpsType fpsType_;
+    int fps_;
+    QDir dir_;
+    QString fileName_;
+    QString filePattern_;
+    FileStartNumberType fileStartNumberType_;
+    int fileStartNumber_;
+    int fileNumberIncrement_;
+    bool fileNumbersUseLeadingZeros_;
+    FileNumbersDigitNumType fileNumbersDigitNumType_;
+    int fileNumbersDigitNum_;
 };
 
 #endif // GENERALEXPORTSETTINGS_H

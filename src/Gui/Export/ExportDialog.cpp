@@ -52,8 +52,8 @@ ExportDialog::ExportDialog(
     layout->addWidget(generalExportWidget_);
     layout->addWidget(fileSpecificSettingsHeading);
     layout->addWidget(fileSpecificExportWidget_);
-    layout->addWidget(buttonBox);
     layout->addStretch();
+    layout->addWidget(buttonBox);
     setLayout(layout);
 
     // Set default export text
@@ -61,6 +61,10 @@ ExportDialog::ExportDialog(
 
     // Set minimimum size
     setMinimumSize(350, 100);
+    setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+
+    // XXX TODO: figure out how to prevent the dialog from shrinking
+    // combo boxes vertically. THe above is not enough.
 }
 
 ExportSettings * ExportDialog::exportSettings() const

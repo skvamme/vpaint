@@ -205,7 +205,8 @@ HEADERS += MainWindow.h \
     Export/ExportDialog.h \
     Export/ExportSettings.h \
     QVBoxHeading.h \
-    FormLayout.h
+    FormLayout.h \
+    DoubleFrameSpinBox.h
 
 SOURCES += main.cpp \
     SaveAndLoad.cpp \
@@ -311,4 +312,5 @@ SOURCES += main.cpp \
     Export/ExportDialog.cpp \
     Export/ExportSettings.cpp \
     QVBoxHeading.cpp \
-    FormLayout.cpp
+    FormLayout.cpp \
+    DoubleFrameSpinBox.cpp
