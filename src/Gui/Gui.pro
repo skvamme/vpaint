@@ -114,7 +114,6 @@ HEADERS += MainWindow.h \
     Timeline.h \
     Global.h \
     ColorSelector.h \
-    SpinBox.h \
     VectorAnimationComplex/Cell.h \
     VectorAnimationComplex/SplitMap.h \
     VectorAnimationComplex/Eigen.h \
@@ -206,7 +205,9 @@ HEADERS += MainWindow.h \
     Export/ExportSettings.h \
     QVBoxHeading.h \
     FormLayout.h \
-    DoubleFrameSpinBox.h
+    DoubleFrameSpinBox.h \
+    LabeledSpinBox.h \
+    SpinBox.h
 
 SOURCES += main.cpp \
     SaveAndLoad.cpp \
@@ -227,7 +228,6 @@ SOURCES += main.cpp \
     Timeline.cpp \
     Global.cpp \
     ColorSelector.cpp \
-    SpinBox.cpp \
     VectorAnimationComplex/Intersection.cpp \
     VectorAnimationComplex/Cell.cpp \
     VectorAnimationComplex/KeyCell.cpp \
@@ -313,4 +313,6 @@ SOURCES += main.cpp \
     Export/ExportSettings.cpp \
     QVBoxHeading.cpp \
     FormLayout.cpp \
-    DoubleFrameSpinBox.cpp
+    DoubleFrameSpinBox.cpp \
+    LabeledSpinBox.cpp \
+    SpinBox.cpp

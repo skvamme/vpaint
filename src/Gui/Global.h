@@ -20,7 +20,7 @@
 #include <QVector>
 #include <QAction>
 #include <QDoubleSpinBox>
-#include "SpinBox.h"
+#include "LabeledSpinBox.h"
 #include "TimeDef.h"
 #include <Eigen/Core>
 #include <QLabel>
@@ -211,13 +211,13 @@ private:
     // Sketch
     QAction * actionPlanarMapMode_;
     QAction * actionSnapMode_;
-    SpinBox * edgeWidth_;
+    LabeledSpinBox * edgeWidth_;
     QAction * actionEdgeWidth_;
-    SpinBox * snapThreshold_;
+    LabeledSpinBox * snapThreshold_;
     QAction * actionSnapThreshold_;
     QAction * actionUseTabletPressure_;
     // Sculpt
-    SpinBox * sculptRadius_;
+    LabeledSpinBox * sculptRadius_;
     QAction * actionSculptRadius_;
 
     // Separators

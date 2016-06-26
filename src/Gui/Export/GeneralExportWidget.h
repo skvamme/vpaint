@@ -13,8 +13,8 @@
 
 class GeneralExportSettings;
 class DoubleFrameSpinBox;
+class SpinBox;
 class QComboBox;
-class QSpinBox;
 class QLineEdit;
 class QPushButton;
 class QCheckBox;
@@ -45,7 +45,7 @@ private:
     DoubleFrameSpinBox * lastFrameSpinBox_;
     QWidget * frameRangeWidget_;
     QComboBox * fpsTypeComboBox_;
-    QSpinBox * fpsSpinBox_;
+    SpinBox * fpsSpinBox_;
     QWidget * fpsWidget_;
     QLineEdit * fileNameLineEdit_;
     QPushButton * fileNameBrowsePushButton_;
@@ -55,11 +55,11 @@ private:
     QPushButton * filePatternMorePushButton_;
     QWidget * filePatternWidget_;
     QComboBox * fileStartNumberTypeComboBox_;
-    QSpinBox * fileStartNumberSpinBox_;
-    QSpinBox * fileNumberIncrementSpinBox_;
+    SpinBox * fileStartNumberSpinBox_;
+    SpinBox * fileNumberIncrementSpinBox_;
     QCheckBox * fileNumbersUseLeadingZerosCheckBox_;
     QComboBox * fileNumbersDigitNumTypeComboBox_;
-    QSpinBox * fileNumbersDigitNumSpinBox_;
+    SpinBox * fileNumbersDigitNumSpinBox_;
     QWidget * fileNumbersDigitNumWidget_;
     QWidget * filePatternMoreWidget_;
     QLabel * fileNamesLabel_;

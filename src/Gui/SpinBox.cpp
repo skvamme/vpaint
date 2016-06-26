@@ -8,53 +8,22 @@
 
 #include "SpinBox.h"
 
-#include <QVBoxLayout>
-
-SpinBox::SpinBox(QWidget *parent) :
-    QWidget(parent),
-    caption_(0),
-    spinBox_(0)
+SpinBox::SpinBox(QWidget * parent) :
+    QSpinBox(parent)
 {
-    // Caption
-    caption_ = new QLabel();
-    QFont labelFont = font();
-    labelFont.setPixelSize(11);
-    caption_->setFont(labelFont);
-    caption_->setAlignment(Qt::AlignCenter);
 
-    // Spin box
-    spinBox_ = new QDoubleSpinBox();
-    spinBox_->setRange(0.0, 999.99);
-
-    // Layout
-    QVBoxLayout * layout = new QVBoxLayout();
-    layout->addWidget(caption_);
-    layout->addWidget(spinBox_);
-    layout->setSpacing(0);
-    layout->setContentsMargins(0,0,0,0);
-    setLayout(layout);
-    setFixedHeight(40);
-
-    // Signal forwarding
-    connect(spinBox_, SIGNAL(valueChanged(double)), this, SIGNAL(valueChanged(double)));
 }
 
-QString SpinBox::caption() const
+QSize SpinBox::minimumSizeHint() const
 {
-    return caption_->text();
+    QSize size = QSpinBox::minimumSizeHint();
+    size.setWidth(50);
+    return size;
 }
 
-void SpinBox::setCaption(const QString & caption)
+QSize SpinBox::sizeHint() const
 {
-    caption_->setText(caption);
-}
-
-double SpinBox::value() const
-{
-    return spinBox_->value();
-}
-
-void SpinBox::setValue(double val)
-{
-    spinBox_->setValue(val);
+    QSize size = QSpinBox::sizeHint();
+    size.setWidth(50);
+    return size;
 }

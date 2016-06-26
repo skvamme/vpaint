@@ -58,13 +58,6 @@ ExportDialog::ExportDialog(
 
     // Set default export text
     setExportText("Export");
-
-    // Set minimimum size
-    setMinimumSize(350, 100);
-    setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-
-    // XXX TODO: figure out how to prevent the dialog from shrinking
-    // combo boxes vertically. THe above is not enough.
 }
 
 ExportSettings * ExportDialog::exportSettings() const

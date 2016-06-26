@@ -60,10 +60,10 @@ Global::Global(MainWindow * w) :
     currentColor_->setToolTip(tr("Current color (C)"));
     currentColor_->setStatusTip(tr("Click to open the color selector"));
 
-    snapThreshold_ = new SpinBox();
+    snapThreshold_ = new LabeledSpinBox();
     snapThreshold_->setCaption(tr(" snap threshold "));
 
-    sculptRadius_ = new SpinBox();
+    sculptRadius_ = new LabeledSpinBox();
     sculptRadius_->setCaption(tr(" sculpt radius "));
 
     // Event filter
@@ -413,7 +413,7 @@ void Global::createToolBars()
     connect(actionUseTabletPressure_, SIGNAL(triggered()), this, SLOT(toggleStylusPressure()));
 
     // Edge width
-    edgeWidth_ = new SpinBox();
+    edgeWidth_ = new LabeledSpinBox();
     edgeWidth_->setCaption(tr(" pen width "));
     edgeWidth_->setValue(settings().edgeWidth());
     actionEdgeWidth_ = toolModeToolBar_->addWidget(edgeWidth_);

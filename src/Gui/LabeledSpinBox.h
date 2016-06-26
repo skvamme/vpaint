@@ -9,25 +9,32 @@
 #ifndef SPINBOX_H
 #define SPINBOX_H
 
-#include <QSpinBox>
+#include <QDoubleSpinBox>
+#include <QLabel>
 
-/// \class SpinBox
-/// \brief A subclass of QSpinBox with customized sizing and styling.
-///
-class SpinBox: public QSpinBox
+class LabeledSpinBox : public QWidget
 {
+    Q_OBJECT
+
 public:
-    /// Creates a SpinBox with the given \p parent.
-    ///
-    SpinBox(QWidget * parent = nullptr);
+    explicit LabeledSpinBox(QWidget * parent = 0);
+    
+    // Caption
+    QString caption() const;
+    void setCaption(const QString & caption);
 
-    /// Reimplemented from QSpinBox::minimumSizeHint().
-    ///
-    virtual QSize minimumSizeHint() const override;
+    // Value
+    double value() const;
 
-    /// Reimplemented from QSpinBox::sizeHint().
-    ///
-    virtual QSize sizeHint() const override;
+signals:
+    void valueChanged(double d);
+
+public slots:
+    void setValue(double val);
+
+private:
+    QLabel * caption_;
+    QDoubleSpinBox * spinBox_;
 };
 
 #endif // SPINBOX_H

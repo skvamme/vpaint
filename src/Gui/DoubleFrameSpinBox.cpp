@@ -12,9 +12,7 @@ DoubleFrameSpinBox::DoubleFrameSpinBox(QWidget * parent) :
     QDoubleSpinBox(parent)
 {
     setDecimals(10);
-    setMinimum(-1e10);
-    setMaximum(+1e10);
-    setMaximumWidth(50);
+    setRange(-1e10, +1e10);
 }
 
 QString	DoubleFrameSpinBox::textFromValue(double value) const
@@ -46,4 +44,18 @@ QString	DoubleFrameSpinBox::textFromValue(double value) const
 
     // Return text
     return text;
+}
+
+QSize DoubleFrameSpinBox::minimumSizeHint() const
+{
+    QSize size = QDoubleSpinBox::minimumSizeHint();
+    size.setWidth(50);
+    return size;
+}
+
+QSize DoubleFrameSpinBox::sizeHint() const
+{
+    QSize size = QDoubleSpinBox::sizeHint();
+    size.setWidth(50);
+    return size;
 }

@@ -21,9 +21,18 @@ public:
     ///
     DoubleFrameSpinBox(QWidget * parent = nullptr);
 
-    /// Reimplemts textFromValue() to remove trailing zeros.
+    /// Reimplemted from QDoubleSpinBox::textFromValue() to remove trailing
+    /// zeros.
     ///
     virtual QString textFromValue(double value) const override;
+
+    /// Reimplemented from QDoubleSpinBox::minimumSizeHint().
+    ///
+    virtual QSize minimumSizeHint() const override;
+
+    /// Reimplemented from QDoubleSpinBox::sizeHint().
+    ///
+    virtual QSize sizeHint() const override;
 };
 
 #endif // DOUBLEFRAMESPINBOX_H

@@ -11,12 +11,10 @@
 #include "GeneralExportSettings.h"
 #include "FormLayout.h"
 #include "DoubleFrameSpinBox.h"
+#include "SpinBox.h"
 
 #include <QComboBox>
-#include <QSpinBox>
 #include <QDoubleSpinBox>
-#include <QFormLayout>
-#include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -50,6 +48,7 @@ GeneralExportWidget::GeneralExportWidget(GeneralExportSettings * settings, QWidg
     QHBoxLayout * frameLayout = new QHBoxLayout();
     frameLayout->addWidget(frameTypeComboBox_);
     frameLayout->addWidget(frameSpinBox_);
+    frameLayout->setStretchFactor(frameTypeComboBox_, 1);
     frameWidget_ = layout->addRow(tr("Frame:"), frameLayout);
 
     // Frame Range
@@ -64,25 +63,25 @@ GeneralExportWidget::GeneralExportWidget(GeneralExportSettings * settings, QWidg
     frameRangeLayout->addWidget(frameRangeTypeComboBox_);
     frameRangeLayout->addWidget(firstFrameSpinBox_);
     frameRangeLayout->addWidget(lastFrameSpinBox_);
+    frameRangeLayout->setStretchFactor(frameRangeTypeComboBox_, 1);
     frameRangeWidget_ = layout->addRow(tr("Frame Range:"), frameRangeLayout);
 
     // FPS
     fpsTypeComboBox_ = new QComboBox();
     fpsTypeComboBox_->addItem(tr("As Authored"), (char) GeneralExportSettings::FpsType::AsAuthored);
     fpsTypeComboBox_->addItem(tr("Custom FPS"),  (char) GeneralExportSettings::FpsType::CustomFps);
-    fpsSpinBox_ = new QSpinBox();
-    fpsSpinBox_->setMinimum(1);
-    fpsSpinBox_->setMaximum(1e6);
-    fpsSpinBox_->setMaximumWidth(50);
+    fpsSpinBox_ = new SpinBox();
+    fpsSpinBox_->setRange(1, 1e6);
     QHBoxLayout * fpsLayout = new QHBoxLayout();
     fpsLayout->addWidget(fpsTypeComboBox_);
     fpsLayout->addWidget(fpsSpinBox_);
+    fpsLayout->setStretchFactor(fpsTypeComboBox_, 1);
     fpsWidget_ = layout->addRow(tr("FPS:"), fpsLayout);
 
     // File Name
     fileNameLineEdit_ = new QLineEdit();
     fileNameBrowsePushButton_ = new QPushButton("...");
-    fileNameBrowsePushButton_->setMaximumWidth(30);
+    fileNameBrowsePushButton_->setMaximumWidth(30); // XXX Use sizeHint + sizePolicy + stretchFactor instead
     QHBoxLayout * fileNameLayout = new QHBoxLayout();
 #ifdef Q_OS_MAC
     fileNameLayout->setSpacing(10);
@@ -96,9 +95,9 @@ GeneralExportWidget::GeneralExportWidget(GeneralExportSettings * settings, QWidg
     // File Pattern
     filePatternLineEdit_ = new QLineEdit();
     filePatternBrowsePushButton_ = new QPushButton("...");
-    filePatternBrowsePushButton_->setMaximumWidth(30);
+    filePatternBrowsePushButton_->setMaximumWidth(30); // XXX Use sizeHint + sizePolicy + stretchFactor instead
     filePatternMorePushButton_ = new QPushButton("+");
-    filePatternMorePushButton_->setMaximumWidth(30);
+    filePatternMorePushButton_->setMaximumWidth(30); // XXX Use sizeHint + sizePolicy + stretchFactor instead
     QHBoxLayout * filePatternLayout = new QHBoxLayout();
 #ifdef Q_OS_MAC
     filePatternLayout->setSpacing(10);
@@ -115,33 +114,31 @@ GeneralExportWidget::GeneralExportWidget(GeneralExportSettings * settings, QWidg
     fileStartNumberTypeComboBox_ = new QComboBox();
     fileStartNumberTypeComboBox_->addItem(tr("First Frame"), (char) GeneralExportSettings::FileStartNumberType::FirstFrame);
     fileStartNumberTypeComboBox_->addItem(tr("Custom"),      (char) GeneralExportSettings::FileStartNumberType::CustomNumber);
-    fileStartNumberSpinBox_ = new QSpinBox();
-    fileStartNumberSpinBox_->setMinimum(-1e6);
-    fileStartNumberSpinBox_->setMaximum(1e6);
-    fileStartNumberSpinBox_->setMaximumWidth(50);
+    fileStartNumberSpinBox_ = new SpinBox();
+    fileStartNumberSpinBox_->setRange(-1e6, 1e6);
     QHBoxLayout * fileStartNumberLayout = new QHBoxLayout();
     fileStartNumberLayout->addWidget(fileStartNumberTypeComboBox_);
     fileStartNumberLayout->addWidget(fileStartNumberSpinBox_);
+    fileStartNumberLayout->setStretchFactor(fileStartNumberTypeComboBox_, 1);
     filePatternMoreLayout->addRow(tr("Start numbering at:"), fileStartNumberLayout);
-    fileNumberIncrementSpinBox_ = new QSpinBox();
-    fileNumberIncrementSpinBox_->setMinimum(1);
-    fileNumberIncrementSpinBox_->setMaximum(1e6);
-    fileNumberIncrementSpinBox_->setMaximumWidth(50);
-    filePatternMoreLayout->addRow(tr("Increment by:"), fileNumberIncrementSpinBox_);
+    fileNumberIncrementSpinBox_ = new SpinBox();
+    fileNumberIncrementSpinBox_->setRange(1, 1e6);
+    QHBoxLayout * fileNumberIncrementLayout = new QHBoxLayout();
+    fileNumberIncrementLayout->addWidget(fileNumberIncrementSpinBox_);
+    fileNumberIncrementLayout->addStretch();
+    filePatternMoreLayout->addRow(tr("Increment by:"), fileNumberIncrementLayout);
     fileNumbersUseLeadingZerosCheckBox_ = new QCheckBox();
     filePatternMoreLayout->addRow(tr("Use leading zeros:"), fileNumbersUseLeadingZerosCheckBox_);
     fileNumbersDigitNumTypeComboBox_ = new QComboBox();
     fileNumbersDigitNumTypeComboBox_->addItem(tr("Auto"),   (char) GeneralExportSettings::FileNumbersDigitNumType::Auto);
     fileNumbersDigitNumTypeComboBox_->addItem(tr("Custom"), (char) GeneralExportSettings::FileNumbersDigitNumType::Custom);
-    fileNumbersDigitNumSpinBox_ = new QSpinBox();
-    fileNumbersDigitNumSpinBox_->setMinimum(1);
-    fileNumbersDigitNumSpinBox_->setMaximum(100);
-    fileNumbersDigitNumSpinBox_->setMaximumWidth(50);
+    fileNumbersDigitNumSpinBox_ = new SpinBox();
+    fileNumbersDigitNumSpinBox_->setRange(1, 100);
     QHBoxLayout * fileNumbersDigitNumLayout = new QHBoxLayout();
     fileNumbersDigitNumLayout->addWidget(fileNumbersDigitNumTypeComboBox_);
     fileNumbersDigitNumLayout->addWidget(fileNumbersDigitNumSpinBox_);
-    //filePatternMoreLayout->addRow(tr("Number of digits:"), fileNumbersDigitNumLayout);
-    filePatternMoreLayout->addRow(tr("Number of digits:"), fileNumbersDigitNumTypeComboBox_);
+    fileNumbersDigitNumLayout->setStretchFactor(fileNumbersDigitNumTypeComboBox_, 1);
+    filePatternMoreLayout->addRow(tr("Number of digits:"), fileNumbersDigitNumLayout);
     filePatternMoreWidget_ = layout->addRow(filePatternMoreLayout);
 
     // File Names
@@ -150,7 +147,4 @@ GeneralExportWidget::GeneralExportWidget(GeneralExportSettings * settings, QWidg
 
     // Set layout
     setLayout(layout);
-
-    // Set size policy
-    setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 }
