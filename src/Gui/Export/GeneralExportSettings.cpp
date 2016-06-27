@@ -14,19 +14,9 @@ GeneralExportSettings::GeneralExportSettings() :
 
 }
 
-void GeneralExportSettings::setExportType(ExportType exportType)
-{
-    exportType_ = exportType;
-}
-
 GeneralExportSettings::ExportType GeneralExportSettings::exportType() const
 {
     return exportType_;
-}
-
-void GeneralExportSettings::setFileFormat(FileFormat fileFormat)
-{
-    fileFormat_ = fileFormat;
 }
 
 GeneralExportSettings::FileFormat GeneralExportSettings::fileFormat() const
@@ -34,19 +24,9 @@ GeneralExportSettings::FileFormat GeneralExportSettings::fileFormat() const
     return fileFormat_;
 }
 
-void GeneralExportSettings::setFrameType(FrameType frameType)
-{
-    frameType_ = frameType;
-}
-
 GeneralExportSettings::FrameType GeneralExportSettings::frameType() const
 {
     return frameType_;
-}
-
-void GeneralExportSettings::setFrame(DoubleFrame frame)
-{
-    frame_ = frame;
 }
 
 DoubleFrame GeneralExportSettings::frame() const
@@ -54,19 +34,9 @@ DoubleFrame GeneralExportSettings::frame() const
     return frame_;
 }
 
-void GeneralExportSettings::setFrameRangeType(FrameRangeType frameRangeType)
-{
-    frameRangeType_ = frameRangeType;
-}
-
 GeneralExportSettings::FrameRangeType GeneralExportSettings::frameRangeType() const
 {
     return frameRangeType_;
-}
-
-void GeneralExportSettings::setFrameRange(const DoubleFrameRange & frameRange)
-{
-    frameRange_ = frameRange;
 }
 
 DoubleFrameRange GeneralExportSettings::frameRange() const
@@ -74,19 +44,9 @@ DoubleFrameRange GeneralExportSettings::frameRange() const
     return frameRange_;
 }
 
-void GeneralExportSettings::setFpsType(FpsType fpsType)
-{
-    fpsType_ = fpsType;
-}
-
 GeneralExportSettings::FpsType GeneralExportSettings::fpsType() const
 {
     return fpsType_;
-}
-
-void GeneralExportSettings::setFps(int fps)
-{
-    fps_ = fps;
 }
 
 int GeneralExportSettings::fps() const
@@ -94,19 +54,9 @@ int GeneralExportSettings::fps() const
     return fps_;
 }
 
-void GeneralExportSettings::setDir(const QDir & dir)
-{
-    dir_ = dir;
-}
-
 QDir GeneralExportSettings::dir() const
 {
     return dir_;
-}
-
-void GeneralExportSettings::setFileName(const QString & fileName)
-{
-    fileName_ = fileName;
 }
 
 QString GeneralExportSettings::fileName() const
@@ -114,19 +64,9 @@ QString GeneralExportSettings::fileName() const
     return fileName_;
 }
 
-void GeneralExportSettings::setFilePattern(const QString & filePattern)
-{
-    filePattern_ = filePattern;
-}
-
 QString GeneralExportSettings::filePattern() const
 {
     return filePattern_;
-}
-
-void GeneralExportSettings::setFileStartNumberType(FileStartNumberType fileStartNumberType)
-{
-    fileStartNumberType_ = fileStartNumberType;
 }
 
 GeneralExportSettings::FileStartNumberType GeneralExportSettings::fileStartNumberType() const
@@ -134,19 +74,9 @@ GeneralExportSettings::FileStartNumberType GeneralExportSettings::fileStartNumbe
     return fileStartNumberType_;
 }
 
-void GeneralExportSettings::setFileStartNumber(int fileStartNumber)
-{
-    fileStartNumber_ = fileStartNumber;
-}
-
 int GeneralExportSettings::fileStartNumber() const
 {
     return fileStartNumber_;
-}
-
-void GeneralExportSettings::setFileNumberIncrement(int fileNumberIncrement)
-{
-    fileNumberIncrement_ = fileNumberIncrement;
 }
 
 int GeneralExportSettings::fileNumberIncrement() const
@@ -154,29 +84,14 @@ int GeneralExportSettings::fileNumberIncrement() const
     return fileNumberIncrement_;
 }
 
-void GeneralExportSettings::setFileNumbersUseLeadingZeros(bool fileNumbersUseLeadingZeros)
-{
-    fileNumbersUseLeadingZeros_ = fileNumbersUseLeadingZeros;
-}
-
 bool GeneralExportSettings::fileNumbersUseLeadingZeros() const
 {
     return fileNumbersUseLeadingZeros_;
 }
 
-void GeneralExportSettings::setFileNumbersDigitNumType(FileNumbersDigitNumType fileNumbersDigitNumType)
-{
-    fileNumbersDigitNumType_ = fileNumbersDigitNumType;
-}
-
 GeneralExportSettings::FileNumbersDigitNumType GeneralExportSettings::fileNumbersDigitNumType() const
 {
     return fileNumbersDigitNumType_;
-}
-
-void GeneralExportSettings::setFileNumbersDigitNum(int fileNumbersDigitNum)
-{
-    fileNumbersDigitNum_ = fileNumbersDigitNum;
 }
 
 int GeneralExportSettings::fileNumbersDigitNum() const
@@ -187,4 +102,192 @@ int GeneralExportSettings::fileNumbersDigitNum() const
 QStringList GeneralExportSettings::fileNames() const
 {
     // XXX TODO
+    return QStringList();
+}
+
+void GeneralExportSettings::setExportType(ExportType exportType)
+{
+    if (GeneralExportSettings::exportType() == exportType)
+        return;
+
+    exportType_ = exportType;
+
+    emit exportTypeChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFileFormat(FileFormat fileFormat)
+{
+    if (GeneralExportSettings::fileFormat() == fileFormat)
+        return;
+
+    fileFormat_ = fileFormat;
+
+    emit fileFormatChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFrameType(FrameType frameType)
+{
+    if (GeneralExportSettings::frameType() == frameType)
+        return;
+
+    frameType_ = frameType;
+
+    emit frameTypeChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFrame(DoubleFrame frame)
+{
+    if (GeneralExportSettings::frame() == frame)
+        return;
+
+    frame_ = frame;
+
+    emit frameChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFrameRangeType(FrameRangeType frameRangeType)
+{
+    if (GeneralExportSettings::frameRangeType() == frameRangeType)
+        return;
+
+    frameRangeType_ = frameRangeType;
+
+    emit frameRangeTypeChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFrameRange(const DoubleFrameRange & frameRange)
+{
+    if (GeneralExportSettings::frameRange() == frameRange)
+        return;
+
+    frameRange_ = frameRange;
+
+    emit frameRangeChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFpsType(FpsType fpsType)
+{
+    if (GeneralExportSettings::fpsType() == fpsType)
+        return;
+
+    fpsType_ = fpsType;
+
+    emit fpsTypeChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFps(int fps)
+{
+    if (GeneralExportSettings::fps() == fps)
+        return;
+
+    fps_ = fps;
+
+    emit fpsChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setDir(const QDir & dir)
+{
+    if (GeneralExportSettings::dir() == dir)
+        return;
+
+    dir_ = dir;
+
+    emit dirChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFileName(const QString & fileName)
+{
+    if (GeneralExportSettings::fileName() == fileName)
+        return;
+
+    fileName_ = fileName;
+
+    emit fileNameChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFilePattern(const QString & filePattern)
+{
+    if (GeneralExportSettings::filePattern() == filePattern)
+        return;
+
+    filePattern_ = filePattern;
+
+    emit filePatternChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFileStartNumberType(FileStartNumberType fileStartNumberType)
+{
+    if (GeneralExportSettings::fileStartNumberType() == fileStartNumberType)
+        return;
+
+    fileStartNumberType_ = fileStartNumberType;
+
+    emit fileStartNumberTypeChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFileStartNumber(int fileStartNumber)
+{
+    if (GeneralExportSettings::fileStartNumber() == fileStartNumber)
+        return;
+
+    fileStartNumber_ = fileStartNumber;
+
+    emit fileStartNumberChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFileNumberIncrement(int fileNumberIncrement)
+{
+    if (GeneralExportSettings::fileNumberIncrement() == fileNumberIncrement)
+        return;
+
+    fileNumberIncrement_ = fileNumberIncrement;
+
+    emit fileNumberIncrementChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFileNumbersUseLeadingZeros(bool fileNumbersUseLeadingZeros)
+{
+    if (GeneralExportSettings::fileNumbersUseLeadingZeros() == fileNumbersUseLeadingZeros)
+        return;
+
+    fileNumbersUseLeadingZeros_ = fileNumbersUseLeadingZeros;
+
+    emit fileNumbersUseLeadingZerosChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFileNumbersDigitNumType(FileNumbersDigitNumType fileNumbersDigitNumType)
+{
+    if (GeneralExportSettings::fileNumbersDigitNumType() == fileNumbersDigitNumType)
+        return;
+
+    fileNumbersDigitNumType_ = fileNumbersDigitNumType;
+
+    emit fileNumbersDigitNumTypeChanged();
+    emit changed();
+}
+
+void GeneralExportSettings::setFileNumbersDigitNum(int fileNumbersDigitNum)
+{
+    if (GeneralExportSettings::fileNumbersDigitNum() == fileNumbersDigitNum)
+        return;
+
+    fileNumbersDigitNum_ = fileNumbersDigitNum;
+
+    emit fileNumbersDigitNumChanged();
+    emit changed();
 }
