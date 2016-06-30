@@ -10,8 +10,12 @@
 #define GENERALEXPORTSETTINGSMODEL_H
 
 #include "GeneralExportSettings.h"
+#include "Frame.h"
 
 #include <QObject>
+
+class TimeManager;
+class FrameModel;
 
 /// \class GeneralExportSettingsModel
 /// \brief A model class for general export settings.
@@ -25,7 +29,9 @@ private:
 public:
     /// Creates a GeneralExportSettingsModel with default settings.
     ///
-    GeneralExportSettingsModel(GeneralExportSettings * data, QObject * parent = nullptr);
+    GeneralExportSettingsModel(GeneralExportSettings * data,
+                               TimeManager * timeManager,
+                               QObject * parent = nullptr);
 
     /// Returns the export type.
     ///
@@ -246,8 +252,12 @@ signals:
     ///
     void fileNamesChanged();
 
+private slots:
+    void onCurrentFrameChanged_(Frame frame);
+
 private:
     GeneralExportSettings * data_;
+    FrameModel * currentFrame_;
 };
 
 #endif // GENERALEXPORTSETTINGSMODEL_H

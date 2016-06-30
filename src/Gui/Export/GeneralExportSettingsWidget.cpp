@@ -174,13 +174,6 @@ void GeneralExportSettingsWidget::setLayout_()
 #define PFN(Type, function, ArgType) \
     static_cast<void (Type::*)(ArgType)>(&Type::function)
 
-// Convenient macro to cast from combo box data to strongly-typed enum.
-// XXX Instead, I should subclass QComboBox as template class templated
-// by the enum, and provide:
-//     MyEnum ComboBox<MyEnum>::enumValue(int index);
-#define TO_ENUM(Type, comboBox, index) \
-    static_cast<Type>(comboBox->itemData(index).toInt())
-
 void GeneralExportSettingsWidget::setConnections_()
 {
     // Export Type
@@ -188,20 +181,55 @@ void GeneralExportSettingsWidget::setConnections_()
             this,                PFN(GeneralExportSettingsWidget, onExportTypeComboBoxActivated_, int));
     connect(settings(), PFN(GeneralExportSettingsModel, exportTypeChanged, ),
             this,       PFN(GeneralExportSettingsWidget, onExportTypeChanged_, ));
+
+    // Frame Type
+    connect(frameTypeComboBox_, PFN(QComboBox, activated, int),
+            this,               PFN(GeneralExportSettingsWidget, onFrameTypeComboBoxActivated_, int));
+    connect(settings(), PFN(GeneralExportSettingsModel, frameTypeChanged, ),
+            this,       PFN(GeneralExportSettingsWidget, onFrameTypeChanged_, ));
+
+    // Frame
+    connect(frameSpinBox_, PFN(DoubleFrameSpinBox, valueChanged, double),
+            this,          PFN(GeneralExportSettingsWidget, onFrameSpinBoxValueChanged_, double));
+    connect(settings(), PFN(GeneralExportSettingsModel, frameChanged, ),
+            this,       PFN(GeneralExportSettingsWidget, onFrameChanged_, ));
 }
 
 void GeneralExportSettingsWidget::setWidgetValuesFromSettings_()
 {
     onExportTypeChanged_();
+    onFrameTypeChanged_();
 }
+
+// Convenient macro to cast from combo box data to strongly-typed enum.
+// XXX Instead, I should subclass QComboBox as template class templated
+// by the enum, and provide:
+//     MyEnum EnumComboBox<MyEnum>::enumValue(int index);
+//     void EnumComboBox<MyEnum>::addItem(QString text, MyEnum enumValue);
+//
+#define TO_ENUM(Type, comboBox, index) \
+    static_cast<Type>(comboBox->itemData(index).toInt())
 
 void GeneralExportSettingsWidget::onExportTypeComboBoxActivated_(int index)
 {
     settings()->setExportType(TO_ENUM(ExportType, exportTypeComboBox_, index));
 }
 
+void GeneralExportSettingsWidget::onFrameTypeComboBoxActivated_(int index)
+{
+    settings()->setFrameType(TO_ENUM(FrameType, frameTypeComboBox_, index));
+}
+
+void GeneralExportSettingsWidget::onFrameSpinBoxValueChanged_(double value)
+{
+    settings()->setFrame(value);
+}
+
 void GeneralExportSettingsWidget::onExportTypeChanged_()
 {
+    int index = exportTypeComboBox_->findData((char) settings()->exportType());
+    exportTypeComboBox_->setCurrentIndex(index);
+
     switch(settings()->exportType())
     {
     case ExportType::Image:
@@ -227,4 +255,29 @@ void GeneralExportSettingsWidget::onExportTypeChanged_()
     default:
         break;
     }
+}
+
+void GeneralExportSettingsWidget::onFrameTypeChanged_()
+{
+    int index = frameTypeComboBox_->findData((char) settings()->frameType());
+    frameTypeComboBox_->setCurrentIndex(index);
+
+    switch(settings()->frameType())
+    {
+    case FrameType::CurrentFrame:
+        frameSpinBox_->setEnabled(false);
+        break;
+
+    case FrameType::CustomFrame:
+        frameSpinBox_->setEnabled(true);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void GeneralExportSettingsWidget::onFrameChanged_()
+{
+    frameSpinBox_->setValue(settings()->frame());
 }

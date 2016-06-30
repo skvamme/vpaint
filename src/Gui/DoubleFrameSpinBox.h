@@ -16,6 +16,10 @@
 ///
 class DoubleFrameSpinBox: public QDoubleSpinBox
 {
+private:
+    Q_OBJECT
+    Q_DISABLE_COPY(DoubleFrameSpinBox)
+
 public:
     /// Creates a DoubleFrameSpinBox with the given \p parent.
     ///

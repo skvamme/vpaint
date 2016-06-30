@@ -40,8 +40,15 @@ private:
     void setWidgetValuesFromSettings_();
 
 private slots:
+    // Widget -> Model connections
     void onExportTypeComboBoxActivated_(int index);
+    void onFrameTypeComboBoxActivated_(int index);
+    void onFrameSpinBoxValueChanged_(double value);
+
+    // Model -> Widget connections
     void onExportTypeChanged_();
+    void onFrameTypeChanged_();
+    void onFrameChanged_();
 
 private:
     GeneralExportSettingsModel * settings_;

@@ -12,6 +12,7 @@
 #include <QObject>
 
 class ExportSettings;
+class TimeManager;
 class GeneralExportSettingsModel;
 class PngExportSettingsModel;
 class SvgExportSettingsModel;
@@ -24,6 +25,7 @@ class ExportSettingsModel: public QObject
 public:
     ExportSettingsModel(
             ExportSettings * data,
+            TimeManager * timeManager,
             QObject * parent = nullptr);
 
     GeneralExportSettingsModel * general() const;
@@ -34,7 +36,7 @@ private:
     // Data managed by this model
     ExportSettings * data_;
 
-    // Child models
+    // Child objects
     GeneralExportSettingsModel * general_;
     PngExportSettingsModel *     png_;
     SvgExportSettingsModel *     svg_;

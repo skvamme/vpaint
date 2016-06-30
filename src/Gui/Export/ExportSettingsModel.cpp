@@ -13,11 +13,14 @@
 #include "PngExportSettingsModel.h"
 #include "SvgExportSettingsModel.h"
 
-ExportSettingsModel::ExportSettingsModel(ExportSettings * data, QObject * parent) :
+ExportSettingsModel::ExportSettingsModel(
+        ExportSettings * data,
+        TimeManager * timeManager,
+        QObject * parent) :
     QObject(parent),
     data_(data)
 {
-    general_ = new GeneralExportSettingsModel(&data->general, this);
+    general_ = new GeneralExportSettingsModel(&data->general, timeManager, this);
     png_     = new PngExportSettingsModel(&data->png, this);
     svg_     = new SvgExportSettingsModel(&data->svg, this);
 }

@@ -8,11 +8,19 @@
 
 #include "GeneralExportSettingsModel.h"
 
-GeneralExportSettingsModel::GeneralExportSettingsModel(GeneralExportSettings * data, QObject * parent) :
-    QObject(parent),
-    data_(data)
-{
+#include "TimeManager.h"
+#include "FrameModel.h"
 
+GeneralExportSettingsModel::GeneralExportSettingsModel(
+        GeneralExportSettings * data,
+        TimeManager * timeManager,
+        QObject * parent) :
+    QObject(parent),
+    data_(data),
+    currentFrame_(timeManager->currentFrame())
+{
+    connect(currentFrame_, &FrameModel::valueChanged,
+            this, &GeneralExportSettingsModel::onCurrentFrameChanged_);
 }
 
 GeneralExportSettings::ExportType GeneralExportSettingsModel::exportType() const
@@ -134,6 +142,16 @@ void GeneralExportSettingsModel::setFrameType(GeneralExportSettings::FrameType f
         return;
 
     data_->frameType_ = frameType;
+
+    if (frameType == GeneralExportSettings::FrameType::CurrentFrame)
+    {
+        Frame currentFrame = currentFrame_->value();
+        if (frame() != currentFrame)
+        {
+            data_->frame_ = currentFrame;
+            emit frameChanged();
+        }
+    }
 
     emit frameTypeChanged();
     emit changed();
@@ -291,4 +309,12 @@ void GeneralExportSettingsModel::setFileNumbersDigitNum(int fileNumbersDigitNum)
 
     emit fileNumbersDigitNumChanged();
     emit changed();
+}
+
+void GeneralExportSettingsModel::onCurrentFrameChanged_(Frame frame)
+{
+    if (frameType() == GeneralExportSettings::FrameType::CurrentFrame)
+    {
+        setFrame(frame);
+    }
 }

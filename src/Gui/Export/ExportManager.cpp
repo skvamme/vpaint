@@ -34,7 +34,7 @@ ExportManager::ExportManager(
 
     modelessExportDialog_(nullptr)
 {
-    currentSettingsModel_ = new ExportSettingsModel(&currentSettings_, this);
+    currentSettingsModel_ = new ExportSettingsModel(&currentSettings_, timeManager, this);
 }
 
 ExportDialog * ExportManager::createExportDialog_()
