@@ -6,13 +6,33 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
-#ifndef FILESPECIFICEXPORTSETTINGS_H
-#define FILESPECIFICEXPORTSETTINGS_H
+#include "FrameModel.h"
 
-class FileSpecificExportSettings
+FrameModel::FrameModel(QObject * parent) :
+    QObject(parent),
+    value_(0)
 {
-public:
-    FileSpecificExportSettings();
-};
 
-#endif // FILESPECIFICEXPORTSETTINGS_H
+}
+
+FrameModel::FrameModel(Frame value, QObject * parent):
+    QObject(parent),
+    value_(value)
+{
+
+}
+
+Frame FrameModel::value() const
+{
+    return value_;
+}
+
+void FrameModel::setValue(Frame value)
+{
+    if (FrameModel::value() == value)
+        return;
+
+    value_ = value;
+
+    emit valueChanged(value_);
+}

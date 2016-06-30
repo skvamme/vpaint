@@ -11,6 +11,10 @@
 
 class QTextStream;
 
+// XXX This class is deprecated and will eventually be deleted. Use Frame instead.
+// If you need to guarantee that the frame is an "integer/exact" frame, use
+// IntFrame instead.
+
 class Time
 {
 public:

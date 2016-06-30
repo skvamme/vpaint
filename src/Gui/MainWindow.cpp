@@ -51,7 +51,9 @@
 #include <QDesktopServices>
 #include <QShortcut>
 
-MainWindow::MainWindow() :
+MainWindow::MainWindow(TimeManager * timeManager, QWidget * parent) :
+    QMainWindow(parent),
+
     scene_(0),
 
     multiView_(0),
@@ -84,7 +86,7 @@ MainWindow::MainWindow() :
     scene_ = new Scene();
 
     // Timeline (must exist before multiview is created, so that newly created views can register to timeline)
-    timeline_ = new Timeline(scene_, this);
+    timeline_ = new Timeline(scene_, timeManager, this);
     connect(timeline_, SIGNAL(timeChanged()),
             this, SLOT(updatePicking())); // maybe should avoid that when playing the animation
     connect(timeline_, SIGNAL(timeChanged()),

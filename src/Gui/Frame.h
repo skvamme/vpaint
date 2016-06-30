@@ -6,4 +6,11 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
-#include "PngExportSettings.h"
+#ifndef FRAME_H
+#define FRAME_H
+
+using IntFrame = int;
+using DoubleFrame = double;
+using Frame = DoubleFrame;
+
+#endif // FRAME_H

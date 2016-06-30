@@ -6,4 +6,27 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
+#ifndef SVGEXPORTSETTINGSMODEL_H
+#define SVGEXPORTSETTINGSMODEL_H
+
 #include "SvgExportSettings.h"
+
+#include <QObject>
+
+/// \class SvgExportSettingsModel
+/// \brief A model class for SVG export settings.
+///
+class SvgExportSettingsModel: public QObject
+{
+private:
+    Q_OBJECT
+    Q_DISABLE_COPY(SvgExportSettingsModel)
+
+public:
+    SvgExportSettingsModel(SvgExportSettings * data, QObject * parent = nullptr);
+
+private:
+    SvgExportSettings * data_;
+};
+
+#endif // SVGEXPORTSETTINGSMODEL_H

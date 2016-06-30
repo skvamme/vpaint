@@ -6,4 +6,27 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
+#ifndef PNGEXPORTSETTINGSMODEL_H
+#define PNGEXPORTSETTINGSMODEL_H
+
 #include "PngExportSettings.h"
+
+#include <QObject>
+
+/// \class PngExportSettingsModel
+/// \brief A model class for PNG export settings.
+///
+class PngExportSettingsModel: public QObject
+{
+private:
+    Q_OBJECT
+    Q_DISABLE_COPY(PngExportSettingsModel)
+
+public:
+    PngExportSettingsModel(PngExportSettings * data, QObject * parent = nullptr);
+
+private:
+    PngExportSettings * data_;
+};
+
+#endif // PNGEXPORTSETTINGSMODEL_H

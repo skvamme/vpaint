@@ -6,9 +6,9 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
-#include "GeneralExportWidget.h"
+#include "GeneralExportSettingsWidget.h"
 
-#include "GeneralExportSettings.h"
+#include "GeneralExportSettingsModel.h"
 #include "FormLayout.h"
 #include "DoubleFrameSpinBox.h"
 #include "SpinBox.h"
@@ -21,29 +21,49 @@
 #include <QPushButton>
 #include <QCheckBox>
 
-GeneralExportWidget::GeneralExportWidget(GeneralExportSettings * settings, QWidget * parent) :
+using ExportType = GeneralExportSettings::ExportType;
+using FileFormat = GeneralExportSettings::FileFormat;
+using FrameType = GeneralExportSettings::FrameType;
+using FrameRangeType = GeneralExportSettings::FrameRangeType;
+using FpsType = GeneralExportSettings::FpsType;
+using FileStartNumberType = GeneralExportSettings::FileStartNumberType;
+using FileNumbersDigitNumType = GeneralExportSettings::FileNumbersDigitNumType;
+
+GeneralExportSettingsWidget::GeneralExportSettingsWidget(GeneralExportSettingsModel * settings, QWidget * parent) :
     QWidget(parent),
     settings_(settings)
+{
+    setLayout_();
+    setConnections_();
+    setWidgetValuesFromSettings_();
+}
+
+GeneralExportSettingsModel * GeneralExportSettingsWidget::settings() const
+{
+    return settings_;
+}
+
+void GeneralExportSettingsWidget::setLayout_()
 {
     // Create layout
     FormLayout * layout = new FormLayout();
 
     // Export Type
     exportTypeComboBox_ = new QComboBox();
-    exportTypeComboBox_->addItem(tr("Image"),          (char) GeneralExportSettings::ExportType::Image);
-    exportTypeComboBox_->addItem(tr("Image Sequence"), (char) GeneralExportSettings::ExportType::ImageSequence);
+    exportTypeComboBox_->addItem(tr("Image"),          (char) ExportType::Image);
+    exportTypeComboBox_->addItem(tr("Image Sequence"), (char) ExportType::ImageSequence);
     layout->addRow(tr("Export Type:"), exportTypeComboBox_);
 
     // File Format
     fileFormatComboBox_ = new QComboBox();
-    fileFormatComboBox_->addItem(tr("PNG"), (char) GeneralExportSettings::FileFormat::Png);
-    fileFormatComboBox_->addItem(tr("SVG"), (char) GeneralExportSettings::FileFormat::Svg);
+    fileFormatComboBox_->addItem(tr("PNG"), (char) FileFormat::Png);
+    fileFormatComboBox_->addItem(tr("SVG"), (char) FileFormat::Svg);
     layout->addRow(tr("File Format:"), fileFormatComboBox_);
 
     // Frame
     frameTypeComboBox_ = new QComboBox();
-    frameTypeComboBox_->addItem(tr("Current Frame"), (char) GeneralExportSettings::FrameType::CurrentFrame);
-    frameTypeComboBox_->addItem(tr("Custom Frame"),  (char) GeneralExportSettings::FrameType::CustomFrame);
+    frameTypeComboBox_->addItem(tr("Current Frame"), (char) FrameType::CurrentFrame);
+    frameTypeComboBox_->addItem(tr("Custom Frame"),  (char) FrameType::CustomFrame);
     frameSpinBox_ = new DoubleFrameSpinBox();
     QHBoxLayout * frameLayout = new QHBoxLayout();
     frameLayout->addWidget(frameTypeComboBox_);
@@ -53,10 +73,10 @@ GeneralExportWidget::GeneralExportWidget(GeneralExportSettings * settings, QWidg
 
     // Frame Range
     frameRangeTypeComboBox_ = new QComboBox();
-    frameRangeTypeComboBox_->addItem(tr("Playback Range"), (char) GeneralExportSettings::FrameRangeType::PlaybackRange);
-    frameRangeTypeComboBox_->addItem(tr("Custom Range"),   (char) GeneralExportSettings::FrameRangeType::CustomRange);
-    frameRangeTypeComboBox_->addItem(tr("Current Frame"),  (char) GeneralExportSettings::FrameRangeType::CurrentFrame);
-    frameRangeTypeComboBox_->addItem(tr("Custom Frame"),   (char) GeneralExportSettings::FrameRangeType::CustomFrame);
+    frameRangeTypeComboBox_->addItem(tr("Playback Range"), (char) FrameRangeType::PlaybackRange);
+    frameRangeTypeComboBox_->addItem(tr("Custom Range"),   (char) FrameRangeType::CustomRange);
+    frameRangeTypeComboBox_->addItem(tr("Current Frame"),  (char) FrameRangeType::CurrentFrame);
+    frameRangeTypeComboBox_->addItem(tr("Custom Frame"),   (char) FrameRangeType::CustomFrame);
     firstFrameSpinBox_ = new DoubleFrameSpinBox();
     lastFrameSpinBox_ = new DoubleFrameSpinBox();
     QHBoxLayout * frameRangeLayout = new QHBoxLayout();
@@ -68,8 +88,8 @@ GeneralExportWidget::GeneralExportWidget(GeneralExportSettings * settings, QWidg
 
     // FPS
     fpsTypeComboBox_ = new QComboBox();
-    fpsTypeComboBox_->addItem(tr("As Authored"), (char) GeneralExportSettings::FpsType::AsAuthored);
-    fpsTypeComboBox_->addItem(tr("Custom FPS"),  (char) GeneralExportSettings::FpsType::CustomFps);
+    fpsTypeComboBox_->addItem(tr("As Authored"), (char) FpsType::AsAuthored);
+    fpsTypeComboBox_->addItem(tr("Custom FPS"),  (char) FpsType::CustomFps);
     fpsSpinBox_ = new SpinBox();
     fpsSpinBox_->setRange(1, 1e6);
     QHBoxLayout * fpsLayout = new QHBoxLayout();
@@ -112,8 +132,8 @@ GeneralExportWidget::GeneralExportWidget(GeneralExportSettings * settings, QWidg
     // File Pattern More
     FormLayout * filePatternMoreLayout = new FormLayout();
     fileStartNumberTypeComboBox_ = new QComboBox();
-    fileStartNumberTypeComboBox_->addItem(tr("First Frame"), (char) GeneralExportSettings::FileStartNumberType::FirstFrame);
-    fileStartNumberTypeComboBox_->addItem(tr("Custom"),      (char) GeneralExportSettings::FileStartNumberType::CustomNumber);
+    fileStartNumberTypeComboBox_->addItem(tr("First Frame"), (char) FileStartNumberType::FirstFrame);
+    fileStartNumberTypeComboBox_->addItem(tr("Custom"),      (char) FileStartNumberType::CustomNumber);
     fileStartNumberSpinBox_ = new SpinBox();
     fileStartNumberSpinBox_->setRange(-1e6, 1e6);
     QHBoxLayout * fileStartNumberLayout = new QHBoxLayout();
@@ -130,8 +150,8 @@ GeneralExportWidget::GeneralExportWidget(GeneralExportSettings * settings, QWidg
     fileNumbersUseLeadingZerosCheckBox_ = new QCheckBox();
     filePatternMoreLayout->addRow(tr("Use leading zeros:"), fileNumbersUseLeadingZerosCheckBox_);
     fileNumbersDigitNumTypeComboBox_ = new QComboBox();
-    fileNumbersDigitNumTypeComboBox_->addItem(tr("Auto"),   (char) GeneralExportSettings::FileNumbersDigitNumType::Auto);
-    fileNumbersDigitNumTypeComboBox_->addItem(tr("Custom"), (char) GeneralExportSettings::FileNumbersDigitNumType::Custom);
+    fileNumbersDigitNumTypeComboBox_->addItem(tr("Auto"),   (char) FileNumbersDigitNumType::Auto);
+    fileNumbersDigitNumTypeComboBox_->addItem(tr("Custom"), (char) FileNumbersDigitNumType::Custom);
     fileNumbersDigitNumSpinBox_ = new SpinBox();
     fileNumbersDigitNumSpinBox_->setRange(1, 100);
     QHBoxLayout * fileNumbersDigitNumLayout = new QHBoxLayout();
@@ -147,4 +167,64 @@ GeneralExportWidget::GeneralExportWidget(GeneralExportSettings * settings, QWidg
 
     // Set layout
     setLayout(layout);
+}
+
+// Convenient macro to get a function pointer, resolving ambiguity in case
+// of overloaded function typers.
+#define PFN(Type, function, ArgType) \
+    static_cast<void (Type::*)(ArgType)>(&Type::function)
+
+// Convenient macro to cast from combo box data to strongly-typed enum.
+// XXX Instead, I should subclass QComboBox as template class templated
+// by the enum, and provide:
+//     MyEnum ComboBox<MyEnum>::enumValue(int index);
+#define TO_ENUM(Type, comboBox, index) \
+    static_cast<Type>(comboBox->itemData(index).toInt())
+
+void GeneralExportSettingsWidget::setConnections_()
+{
+    // Export Type
+    connect(exportTypeComboBox_, PFN(QComboBox, activated, int),
+            this,                PFN(GeneralExportSettingsWidget, onExportTypeComboBoxActivated_, int));
+    connect(settings(), PFN(GeneralExportSettingsModel, exportTypeChanged, ),
+            this,       PFN(GeneralExportSettingsWidget, onExportTypeChanged_, ));
+}
+
+void GeneralExportSettingsWidget::setWidgetValuesFromSettings_()
+{
+    onExportTypeChanged_();
+}
+
+void GeneralExportSettingsWidget::onExportTypeComboBoxActivated_(int index)
+{
+    settings()->setExportType(TO_ENUM(ExportType, exportTypeComboBox_, index));
+}
+
+void GeneralExportSettingsWidget::onExportTypeChanged_()
+{
+    switch(settings()->exportType())
+    {
+    case ExportType::Image:
+        frameWidget_->show();
+        frameRangeWidget_->hide();
+        fpsWidget_->hide();
+        fileNameWidget_->show();
+        filePatternWidget_->hide();
+        filePatternMoreWidget_->hide();
+        fileNamesLabel_->hide();
+        break;
+
+    case ExportType::ImageSequence:
+        frameWidget_->hide();
+        frameRangeWidget_->show();
+        fpsWidget_->show();
+        fileNameWidget_->hide();
+        filePatternWidget_->show();
+        filePatternMoreWidget_->hide();
+        fileNamesLabel_->show();
+        break;
+
+    default:
+        break;
+    }
 }

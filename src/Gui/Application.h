@@ -13,6 +13,7 @@
 
 class MainWindow;
 class ExportManager;
+class TimeManager;
 
 class Application;
 #if defined(qApp)
@@ -36,6 +37,10 @@ public:
     ///
     ~Application();
 
+    /// Returns the TimeManager of the Application.
+    ///
+    TimeManager * timeManager() const;
+
     /// Returns the MainWindow of the Application.
     ///
     MainWindow * mainWindow() const;
@@ -58,12 +63,10 @@ private slots:
     void emitOpenFileRequest_();
 
 private:
-    void createMainWindow_();
-    void destroyMainWindow_();
-
-private:
+    TimeManager * timeManager_;
     MainWindow * mainWindow_;
     ExportManager * exportManager_;
+
     QString openFileRequestFilename_;
 };
 

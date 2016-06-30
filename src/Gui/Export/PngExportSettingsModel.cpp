@@ -6,9 +6,11 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
-#include "SvgExportWidget.h"
+#include "PngExportSettingsModel.h"
 
-SvgExportWidget::SvgExportWidget()
+PngExportSettingsModel::PngExportSettingsModel(PngExportSettings * data, QObject * parent) :
+    QObject(parent),
+    data_(data)
 {
 
 }

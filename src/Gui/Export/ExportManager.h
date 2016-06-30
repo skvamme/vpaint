@@ -16,6 +16,8 @@
 class Scene;
 class MultiView;
 class ExportDialog;
+class TimeManager;
+class ExportSettingsModel;
 
 /// \class ExportManager
 /// \brief A class that manages export-related settings, widgets, and actions.
@@ -33,8 +35,8 @@ public:
     /// \p scene is used as scene to export, and the given \p multiView is necessary
     /// to export with the CurrentView render setting, and to obtain the currentFrame.
     ///
-    ///
     ExportManager(
+            TimeManager * timeManager,
             Scene * scene,
             MultiView * multiView,
             QWidget * dialogParent = nullptr,
@@ -67,16 +69,26 @@ private slots:
     bool onExportDialogRejected_();
 
 private:
-    static bool export_(const ExportSettings & exportSettings_);
+    ExportDialog * modelessExportDialog();
+    ExportDialog * createExportDialog_();
+    static bool export_(const ExportSettings & settings);
 
 private:
+    // Observed objects
     Scene * scene_;
     MultiView * multiView_;
     QWidget * dialogParent_;
-    ExportSettings exportSettings_; //< current settings
-    ExportDialog * exportDialog_; //< modeless dialog
-    bool exported_; //< has the document been exported already?
-    ExportSettings exportedSettings_; //< settings used for previous export
+
+    // Stored data
+    ExportSettings currentSettings_;
+    bool exported_;                     //< has the document been exported already?
+    ExportSettings exportedSettings_;   //< settings used for previous export, if any
+
+    // Child models
+    ExportSettingsModel * currentSettingsModel_;
+
+    // Managed widgets
+    ExportDialog * modelessExportDialog_;
 };
 
 #endif // EXPORTMANAGER_H

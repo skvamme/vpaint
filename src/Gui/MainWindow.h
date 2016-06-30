@@ -42,12 +42,14 @@ class SelectionInfoWidget;
 class ObjectPropertiesWidget;
 class AnimatedCycleWidget;
 
+class TimeManager;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    MainWindow();
+    MainWindow(TimeManager * timeManager, QWidget * parent = nullptr);
     ~MainWindow();
 
     Scene * scene() const;

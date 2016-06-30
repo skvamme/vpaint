@@ -9,6 +9,8 @@
 #ifndef FRAMERANGE_H
 #define FRAMERANGE_H
 
+#include "Frame.h"
+
 /// \class FrameRange
 /// \brief A class template to represent a frame range.
 ///
@@ -17,19 +19,19 @@
 ///   - integer assignment  (frame = 0 and frame = 1 must be allowed)
 ///
 template <class Frame>
-class FrameRange
+class TFrameRange
 {
 public:
     /// Creates an empty FrameRange.
     ///
-    FrameRange()
+    TFrameRange()
     {
         setEmpty();
     }
 
     /// Creates a FrameRange made of a single frame.
     ///
-    FrameRange(Frame frame)
+    TFrameRange(Frame frame)
     {
         setFrame(frame);
     }
@@ -37,7 +39,7 @@ public:
     /// Creates a FrameRange given by firstFrame and lastFrame, using the
     /// same semantics of setRange().
     ///
-    FrameRange(Frame firstFrame, Frame lastFrame, bool allowEmpty = false)
+    TFrameRange(Frame firstFrame, Frame lastFrame, bool allowEmpty = false)
     {
         setRange(firstFrame, lastFrame, allowEmpty);
     }
@@ -133,7 +135,7 @@ public:
 
     /// Returns true if the two FrameRanges are equal. Returns false otherwise.
     ///
-    bool operator==(const FrameRange & other) const
+    bool operator==(const TFrameRange & other) const
     {
         return firstFrame_ == other.firstFrame_ &&
                lastFrame_  == other.lastFrame_;
@@ -142,7 +144,7 @@ public:
     /// Returns true if the two FrameRanges are different. Returns false
     /// otherwise.
     ///
-    bool operator!=(const FrameRange & other) const
+    bool operator!=(const TFrameRange & other) const
     {
         return !(*this == other);
     }
@@ -200,10 +202,8 @@ private:
     Frame lastFrame_;
 };
 
-using IntFrame = int;
-using DoubleFrame = double;
-
-using IntFrameRange = FrameRange<IntFrame>;
-using DoubleFrameRange = FrameRange<DoubleFrame>;
+using IntFrameRange = TFrameRange<IntFrame>;
+using DoubleFrameRange = TFrameRange<DoubleFrame>;
+using FrameRange = TFrameRange<Frame>;
 
 #endif // FRAMERANGE_H

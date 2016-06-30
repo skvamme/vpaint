@@ -194,20 +194,26 @@ HEADERS += MainWindow.h \
     PngExport/PngExportDialog.h \
     PngExport/PngExporter.h \
     Export/ExportManager.h \
-    Export/GeneralExportSettings.h \
-    Export/FileSpecificExportSettings.h \
     Export/PngExportSettings.h \
     Export/SvgExportSettings.h \
-    Export/PngExportWidget.h \
-    Export/GeneralExportWidget.h \
-    Export/SvgExportWidget.h \
     Export/ExportDialog.h \
-    Export/ExportSettings.h \
     QVBoxHeading.h \
     FormLayout.h \
     DoubleFrameSpinBox.h \
     LabeledSpinBox.h \
-    SpinBox.h
+    SpinBox.h \
+    Frame.h \
+    TimeManager.h \
+    FrameModel.h \
+    Export/ExportSettingsModel.h \
+    Export/GeneralExportSettingsModel.h \
+    Export/ExportSettings.h \
+    Export/GeneralExportSettings.h \
+    Export/PngExportSettingsModel.h \
+    Export/GeneralExportSettingsWidget.h \
+    Export/PngExportSettingsWidget.h \
+    Export/SvgExportSettingsWidget.h \
+    Export/SvgExportSettingsModel.h
 
 SOURCES += main.cpp \
     SaveAndLoad.cpp \
@@ -302,17 +308,22 @@ SOURCES += main.cpp \
     PngExport/PngExportDialog.cpp \
     PngExport/PngExporter.cpp \
     Export/ExportManager.cpp \
-    Export/GeneralExportSettings.cpp \
-    Export/FileSpecificExportSettings.cpp \
     Export/PngExportSettings.cpp \
     Export/SvgExportSettings.cpp \
-    Export/PngExportWidget.cpp \
-    Export/GeneralExportWidget.cpp \
-    Export/SvgExportWidget.cpp \
     Export/ExportDialog.cpp \
-    Export/ExportSettings.cpp \
     QVBoxHeading.cpp \
     FormLayout.cpp \
     DoubleFrameSpinBox.cpp \
     LabeledSpinBox.cpp \
-    SpinBox.cpp
+    SpinBox.cpp \
+    TimeManager.cpp \
+    FrameModel.cpp \
+    Export/ExportSettingsModel.cpp \
+    Export/GeneralExportSettingsModel.cpp \
+    Export/ExportSettings.cpp \
+    Export/GeneralExportSettings.cpp \
+    Export/PngExportSettingsModel.cpp \
+    Export/SvgExportSettingsWidget.cpp \
+    Export/PngExportSettingsWidget.cpp \
+    Export/GeneralExportSettingsWidget.cpp \
+    Export/SvgExportSettingsModel.cpp

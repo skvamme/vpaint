@@ -22,11 +22,12 @@
 #include <QDialogButtonBox>
 
 #include <QMouseEvent>
-#include <QtDebug>
 
 #include "Scene.h"
 #include "View.h"
 #include "Global.h"
+#include "TimeManager.h"
+#include "FrameModel.h"
 
 #include "VectorAnimationComplex/VAC.h"
 #include "VectorAnimationComplex/Cell.h"
@@ -494,9 +495,10 @@ QPushButton * makeButton_(const QString & iconPath, QAction * action)
 
 }
 
-Timeline::Timeline(Scene *scene, QWidget *parent) :
+Timeline::Timeline(Scene * scene, TimeManager * timeManager, QWidget * parent) :
     QWidget(parent),
-    scene_(scene)
+    scene_(scene),
+    timeManager_(timeManager)
 {
     // initialisations
     totalPixelOffset_ = 0;
@@ -1105,15 +1107,35 @@ void Timeline::goToPreviousFrame(View * view)
 
 void Timeline::goToFrame(View * view, double frame)
 {
-    view->setActiveTime(Time(frame)); // float time
-    hbar_->repaint();
-    emit timeChanged();
+    goToFrame_(view, Time(frame));
 }
 
 void Timeline::goToFrame(View * view, int frame)
 {
-    view->setActiveTime(Time(frame)); // exact frame
+    goToFrame_(view, Time(frame));
+}
+
+void Timeline::goToFrame_(View * view, Time frame)
+{
+    // Set view actime time. This does not cause a repaint.
+    // It justs sets the value that can be queried by renderer
+    view->setActiveTime(frame);
+
+    // Repaint the timeline part that needs to be repainted
     hbar_->repaint();
+
+    // Update the application-wide currentFrame().
+    timeManager_->currentFrame()->setValue((Frame) frame.floatTime());
+
+    // Emit timeChanged(). This causes all views to update.
+    //
+    // XXX Can probably be optimized/refactored, so that only
+    // relevant views are re-renderered (e.g., currentView, view3D,
+    // maybe others?)
+    //
+    // XXX This was written before the introduction of the class
+    // TimeManager. It should probably be entirely removed now, and
+    // Views should updates based on signals from TimeManager.
     emit timeChanged();
 }
 

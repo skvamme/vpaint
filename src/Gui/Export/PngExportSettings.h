@@ -9,10 +9,8 @@
 #ifndef PNGEXPORTSETTINGS_H
 #define PNGEXPORTSETTINGS_H
 
-class PngExportSettings
+struct PngExportSettings
 {
-public:
-    PngExportSettings();
 };
 
 #endif // PNGEXPORTSETTINGS_H

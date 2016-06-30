@@ -9,21 +9,18 @@
 #ifndef EXPORTSETTINGS_H
 #define EXPORTSETTINGS_H
 
-class GeneralExportSettings;
-class FileSpecificExportSettings;
+#include "GeneralExportSettings.h"
+#include "PngExportSettings.h"
+#include "SvgExportSettings.h"
 
-class ExportSettings
+/// \class ExportSettings
+/// \brief A struct to store export settings data.
+///
+struct ExportSettings
 {
-public:
-    ExportSettings();
-    ~ExportSettings();
-
-    GeneralExportSettings * generalExportSettings() const;
-    FileSpecificExportSettings * fileSpecificExportSettings() const;
-
-private:
-    GeneralExportSettings * generalExportSettings_;
-    FileSpecificExportSettings * fileSpecificExportSettings_;
+    GeneralExportSettings general;
+    PngExportSettings     png;
+    SvgExportSettings     svg;
 };
 
 #endif // EXPORTSETTINGS_H

@@ -8,8 +8,8 @@
 
 #include "ExportDialog.h"
 
-#include "ExportSettings.h"
-#include "GeneralExportWidget.h"
+#include "ExportSettingsModel.h"
+#include "GeneralExportSettingsWidget.h"
 #include "QVBoxHeading.h"
 
 #include <QDialogButtonBox>
@@ -20,7 +20,7 @@
 ExportDialog::ExportDialog(
         Scene * scene,
         MultiView * multiView,
-        ExportSettings * exportSettings,
+        ExportSettingsModel * exportSettings,
         QWidget * parent) :
 
     QDialog(parent),
@@ -34,7 +34,7 @@ ExportDialog::ExportDialog(
     QVBoxHeading * fileSpecificSettingsHeading = new QVBoxHeading("Specific Settings");
 
     // Create general export widget
-    generalExportWidget_ = new GeneralExportWidget(exportSettings_->generalExportSettings(), this);
+    generalExportWidget_ = new GeneralExportSettingsWidget(exportSettings_->general(), this);
 
     // Create file-specific export widget
     fileSpecificExportWidget_ = new QWidget(this);
@@ -60,7 +60,7 @@ ExportDialog::ExportDialog(
     setExportText("Export");
 }
 
-ExportSettings * ExportDialog::exportSettings() const
+ExportSettingsModel * ExportDialog::exportSettings() const
 {
     return exportSettings_;
 }

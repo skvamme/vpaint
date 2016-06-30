@@ -6,13 +6,15 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
-#ifndef PNGEXPORTWIDGET_H
-#define PNGEXPORTWIDGET_H
+#ifndef PNGEXPORTSETTINGSWIDGET_H
+#define PNGEXPORTSETTINGSWIDGET_H
 
-class PngExportWidget
+// XXX TODO
+
+class PngExportSettingsWidget
 {
 public:
-    PngExportWidget();
+    PngExportSettingsWidget();
 };
 
-#endif // PNGEXPORTWIDGET_H
+#endif // PNGEXPORTSETTINGSWIDGET_H

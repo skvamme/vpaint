@@ -6,9 +6,17 @@
 // license terms and conditions in the LICENSE.MIT file found in the top-level
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
-#include "FileSpecificExportSettings.h"
+#include "TimeManager.h"
 
-FileSpecificExportSettings::FileSpecificExportSettings()
+#include "FrameModel.h"
+
+TimeManager::TimeManager(QObject * parent) :
+    QObject(parent)
 {
+    currentFrame_ = new FrameModel(this);
+}
 
+FrameModel * TimeManager::currentFrame() const
+{
+    return currentFrame_;
 }

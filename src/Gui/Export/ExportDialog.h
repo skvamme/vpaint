@@ -13,8 +13,8 @@
 
 class Scene;
 class MultiView;
-class ExportSettings;
-class GeneralExportWidget;
+class ExportSettingsModel;
+class GeneralExportSettingsWidget;
 class QPushButton;
 
 /// \class ExportDialog
@@ -121,12 +121,12 @@ public:
     ExportDialog(
             Scene * scene,
             MultiView * multiView,
-            ExportSettings * exportSettings,
+            ExportSettingsModel * exportSettings,
             QWidget * parent = nullptr);
 
     /// Returns the ExportSettings this ExportDialog acts on.
     ///
-    ExportSettings * exportSettings() const;
+    ExportSettingsModel * exportSettings() const;
 
     /// Sets the text that appears on the export button and on the window
     /// title. Default is "Export".
@@ -145,11 +145,11 @@ private:
 private:
     Scene * scene_;
     MultiView * multiView_;
-    ExportSettings * exportSettings_;
+    ExportSettingsModel * exportSettings_;
 
     QString exportText_;
 
-    GeneralExportWidget * generalExportWidget_;
+    GeneralExportSettingsWidget * generalExportWidget_;
     QWidget * fileSpecificExportWidget_;
     QPushButton * exportButton_;
     QPushButton * cancelButton_;

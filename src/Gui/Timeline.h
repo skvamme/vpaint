@@ -28,6 +28,7 @@ class Scene;
 class XmlStreamWriter;
 class XmlStreamReader;
 class QAction;
+class TimeManager;
 
 // Paint the top timeline bar.
 // It's a friend of Timeline: can access all members of it
@@ -116,7 +117,7 @@ class Timeline : public QWidget
     Q_OBJECT
 
 public:
-    Timeline(Scene * scene, QWidget *parent = 0);
+    Timeline(Scene * scene, TimeManager * timeManager, QWidget *parent = 0);
     ~Timeline();
 
     void read(XmlStreamReader & xml);
@@ -189,14 +190,18 @@ protected:
     void paintEvent(QPaintEvent * event);
 
 private:
+    void goToFrame_(View * view, Time frame);
+
+private:
     // Selected cell info
     int selectionType_; // 0 for no selection; 1 for at least one key cells; 2 for only inbetween cells
     double t_;
     double t1_;
     double t2_;
 
-    // Linked scene
+    // Observed QObjects
     Scene * scene_;
+    TimeManager * timeManager_;
 
     // The views whose times are controlled by this timeline
     QList<View*> views_;

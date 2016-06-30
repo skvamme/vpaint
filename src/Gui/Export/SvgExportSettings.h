@@ -9,10 +9,8 @@
 #ifndef SVGEXPORTSETTINGS_H
 #define SVGEXPORTSETTINGS_H
 
-class SvgExportSettings
+struct SvgExportSettings
 {
-public:
-    SvgExportSettings();
 };
 
 #endif // SVGEXPORTSETTINGS_H

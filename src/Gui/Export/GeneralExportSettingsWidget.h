@@ -11,7 +11,7 @@
 
 #include <QWidget>
 
-class GeneralExportSettings;
+class GeneralExportSettingsModel;
 class DoubleFrameSpinBox;
 class SpinBox;
 class QComboBox;
@@ -20,20 +20,31 @@ class QPushButton;
 class QCheckBox;
 class QLabel;
 
-/// \class GeneralExportWidget
+/// \class GeneralExportSettingsWidget
 /// \brief A widget that allows users to author a GeneralExportSettings.
 ///
-class GeneralExportWidget: public QWidget
+class GeneralExportSettingsWidget: public QWidget
 {
 private:
     Q_OBJECT
-    Q_DISABLE_COPY(GeneralExportWidget)
+    Q_DISABLE_COPY(GeneralExportSettingsWidget)
 
 public:
-    GeneralExportWidget(GeneralExportSettings * settings, QWidget * parent = nullptr);
+    GeneralExportSettingsWidget(GeneralExportSettingsModel * settings, QWidget * parent = nullptr);
+
+    GeneralExportSettingsModel * settings() const;
 
 private:
-    GeneralExportSettings * settings_;
+    void setLayout_();
+    void setConnections_();
+    void setWidgetValuesFromSettings_();
+
+private slots:
+    void onExportTypeComboBoxActivated_(int index);
+    void onExportTypeChanged_();
+
+private:
+    GeneralExportSettingsModel * settings_;
 
     QComboBox * exportTypeComboBox_;
     QComboBox * fileFormatComboBox_;

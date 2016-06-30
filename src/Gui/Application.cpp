@@ -7,10 +7,12 @@
 // directory of this distribution and at http://opensource.org/licenses/MIT
 
 #include "Application.h"
+
 #include "Export/ExportManager.h"
 #include "MainWindow.h"
 #include "Global.h"
 #include "UpdateCheck.h"
+#include "TimeManager.h"
 
 #include <QFileOpenEvent>
 #include <QTimer>
@@ -27,12 +29,18 @@ Application::Application(int & argc, char ** argv) :
     // Set application version
     setApplicationVersion(APP_VERSION);
 
-    // Create and show main window
-    createMainWindow_();
+    // Create TimeManager
+    timeManager_ = new TimeManager(this);
+
+    // Create and show main window.
+    // Note: we can't set 'this' as parent of the main window, since the
+    // parent of a QWidget must be a QWidget.
+    mainWindow_ = new MainWindow(timeManager(), nullptr);
     mainWindow()->show();
 
     // Create ExportManager
-    exportManager_ = new ExportManager(mainWindow()->scene(),
+    exportManager_ = new ExportManager(timeManager(),
+                                       mainWindow()->scene(),
                                        mainWindow()->multiView(),
                                        mainWindow(),
                                        this);
@@ -50,24 +58,14 @@ Application::Application(int & argc, char ** argv) :
 
 Application::~Application()
 {
-    destroyMainWindow_();
-}
-
-void Application::createMainWindow_()
-{
-    // Note: we can't set 'this' as parent of 'mainWindow_' because
-    // mainWindow_'s parent expect a QWidget, and 'this' is not a QWidget
-    // (QApplication inherits from QObject but not QWidget)
-
-    mainWindow_ = new MainWindow();
-}
-
-void Application::destroyMainWindow_()
-{
-    // Since mainWindow_ has no parent, it must be deleted manually. This is
-    // one of the rare cases where we need to do this.
+    // Since mainWindow_ has no parent, it must be deleted manually.
 
     delete mainWindow_;
+}
+
+TimeManager * Application::timeManager() const
+{
+    return timeManager_;
 }
 
 ExportManager * Application::exportManager() const

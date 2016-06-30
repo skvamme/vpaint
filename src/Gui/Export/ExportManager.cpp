@@ -8,11 +8,13 @@
 
 #include "ExportManager.h"
 
+#include "ExportSettingsModel.h"
 #include "Scene.h"
 #include "MultiView.h"
 #include "ExportDialog.h"
 
 ExportManager::ExportManager(
+        TimeManager * timeManager,
         Scene * scene,
         MultiView * multiView,
         QWidget * dialogParent,
@@ -23,53 +25,71 @@ ExportManager::ExportManager(
     scene_(scene),
     multiView_(multiView),
     dialogParent_(dialogParent),
-    exportDialog_(nullptr),
-    exported_(false)
-{
 
+    currentSettings_(),
+    exported_(false),
+    exportedSettings_(),
+
+    currentSettingsModel_(nullptr),
+
+    modelessExportDialog_(nullptr)
+{
+    currentSettingsModel_ = new ExportSettingsModel(&currentSettings_, this);
+}
+
+ExportDialog * ExportManager::createExportDialog_()
+{
+    return new ExportDialog(scene_,
+                            multiView_,
+                            currentSettingsModel_,
+                            dialogParent_);
+}
+
+ExportDialog * ExportManager:: modelessExportDialog()
+{
+    if (!modelessExportDialog_)
+    {
+        // Create modeless dialog. Will be automatically destroyed by dialogParent_.
+        modelessExportDialog_ = createExportDialog_();
+
+        // Setup connections
+        connect(modelessExportDialog_, &ExportDialog::accepted,
+                this, &ExportManager::onExportDialogAccepted_);
+        connect(modelessExportDialog_, &ExportDialog::rejected,
+                this, &ExportManager::onExportDialogRejected_);
+    }
+
+    return modelessExportDialog_;
 }
 
 void ExportManager::exportAsModeless()
 {
-    if (!exportDialog_)
-    {
-        // Create ExportDialog and set parent widget. Will be automatically
-        // destroyed by its parent widget.
-        exportDialog_ = new ExportDialog(scene_,
-                                         multiView_,
-                                         &exportSettings_,
-                                         dialogParent_);
+    // Get or create modeless dialog
+    ExportDialog * dialog = modelessExportDialog();
 
-        connect(exportDialog_, &ExportDialog::accepted,
-                this, &ExportManager::onExportDialogAccepted_);
-        connect(exportDialog_, &ExportDialog::rejected,
-                this, &ExportManager::onExportDialogRejected_);
-    }
-
-    // Show dialog, and raise if was already visible but
-    // hidden behind other windows.
-    exportDialog_->show();
-    exportDialog_->raise();
-    exportDialog_->activateWindow();
+    // Show dialog (and raise it, in case it is already
+    // visible but hidden behind other windows).
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
 }
 
 bool ExportManager::exportAsModal()
 {
-    if (exportDialog_)
+    if (modelessExportDialog_)
     {
         // Avoid seeing the modeless and modal dialog at the same time
-        exportDialog_->hide();
+        modelessExportDialog_->hide();
     }
 
-    // Create ExportDialog and set parent widget. Will be automatically
-    // destroyed when it goes out of scope, at the end of exportAsModal()
-    ExportDialog dialog(scene_,
-                        multiView_,
-                        &exportSettings_,
-                        dialogParent_);
+    // Create ExportDialog and set parent widget.
+    ExportDialog * dialog = createExportDialog_();
 
-    // Execute modal dialog
-    bool accepted = dialog.exec();
+    // Execute as modal dialog
+    bool accepted = dialog->exec();
+
+    // Delete
+    delete dialog;
 
     // Return value
     return accepted ? onExportDialogAccepted_() : onExportDialogRejected_();
@@ -80,13 +100,13 @@ bool ExportManager::onExportDialogAccepted_()
     // Try to export with the given settings.
     // This may fail due to file permission, or because the user cancelled
     // the operation halfway through (e.g., because it was taking too long).
-    bool success = true; // export_(exportSettings_);
+    bool success = export_(currentSettings_);
 
     // Remember settings of last export
     if (success)
     {
         exported_ = true;
-        exportedSettings_ = exportSettings_;
+        exportedSettings_ = currentSettings_;
     }
 
     // Returns whether it has been successfully exported
@@ -97,6 +117,12 @@ bool ExportManager::onExportDialogRejected_()
 {
     // Returns whether it has been successfully exported
     return false;
+}
+
+bool ExportManager::export_(const ExportSettings & settings)
+{
+    // XXX TODO
+    return true;
 }
 
 /*
