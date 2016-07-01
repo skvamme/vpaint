@@ -85,25 +85,14 @@ MainWindow::MainWindow(TimeManager * timeManager, QWidget * parent) :
     // Scene
     scene_ = new Scene();
 
-    // Timeline (must exist before multiview is created, so that newly created views can register to timeline)
-    timeline_ = new Timeline(scene_, timeManager, this);
-    connect(timeline_, SIGNAL(timeChanged()),
-            this, SLOT(updatePicking())); // maybe should avoid that when playing the animation
-    connect(timeline_, SIGNAL(timeChanged()),
-            this, SLOT(update())); // should be call in same order
-    connect(scene(), SIGNAL(changed()),
-            timeline_, SLOT(update()));
-    connect(scene(),SIGNAL(selectionChanged()),timeline_,SLOT(update()));
-
     // 2D Views
-    multiView_ = new MultiView(scene_, this);
-    connect(multiView_, SIGNAL(allViewsNeedToUpdate()), timeline_,SLOT(update()));
+    multiView_ = new MultiView(timeManager, scene_, this);
+    // XXX connect(multiView_, SIGNAL(allViewsNeedToUpdate()), timeline_,SLOT(update()));
     connect(multiView_, SIGNAL(allViewsNeedToUpdate()), this, SLOT(update()));
     connect(multiView_, SIGNAL(allViewsNeedToUpdatePicking()), this, SLOT(updatePicking()));
     setCentralWidget(multiView_); // views are drawn
     connect(multiView_, SIGNAL(activeViewChanged()), this, SLOT(updateViewMenu()));
-    connect(multiView_, SIGNAL(activeViewChanged()), timeline_, SLOT(update()));
-
+    // XXX connect(multiView_, SIGNAL(activeViewChanged()), timeline_, SLOT(update()));
     connect(multiView_, SIGNAL(settingsChanged()), this, SLOT(updateViewMenu()));
 
     // 3D View
@@ -114,6 +103,19 @@ MainWindow::MainWindow(TimeManager * timeManager, QWidget * parent) :
     connect(view3D_, SIGNAL(allViewsNeedToUpdatePicking()), this, SLOT(updatePicking()));
     connect(multiView_, SIGNAL(activeViewChanged()), view3D_, SLOT(update()));
     connect(multiView_, SIGNAL(cameraChanged()), view3D_, SLOT(update()));
+
+    // Timeline
+    // (must exist before multiview is created, so that newly created views can register to timeline)
+    // XXX deprecated comment above. Newly created views shouldn't register to the timeline. They
+    // shouldn't even be aware of their existence.
+    timeline_ = new Timeline(scene_, timeManager, this);
+    connect(timeline_, SIGNAL(timeChanged()),
+            this, SLOT(updatePicking())); // maybe should avoid that when playing the animation
+    connect(timeline_, SIGNAL(timeChanged()),
+            this, SLOT(update())); // should be call in same order
+    connect(scene(), SIGNAL(changed()),
+            timeline_, SLOT(update()));
+    connect(scene(),SIGNAL(selectionChanged()),timeline_,SLOT(update()));
 
     // Selection Info
     selectionInfo_ = new SelectionInfoWidget(0);

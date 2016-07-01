@@ -67,12 +67,13 @@ QSplitter * getParentSplitter_(View * w)
 
 }
 
-MultiView::MultiView(Scene *scene, QWidget *parent) :
+MultiView::MultiView(TimeManager * timeManager, Scene * scene, QWidget * parent) :
     QWidget(parent),
     views_(),
     activeView_(0),
     hoveredView_(0),
-    scene_(scene)
+    scene_(scene),
+    timeManager_(timeManager)
 {
     // create initial view and splitter
     View * view = createView_();
@@ -93,11 +94,13 @@ MultiView::MultiView(Scene *scene, QWidget *parent) :
 
 View * MultiView::createView_()
 {
-    ViewWidget * viewWidget = new ViewWidget(scene_, this);
+    ViewWidget * viewWidget = new ViewWidget(timeManager_, scene_, this);
     View * view = viewFromViewWidget_(viewWidget);
     views_ << viewWidget;
     setActiveView(view);
     hoveredView_ = 0;
+
+     // XXX BAD. Should be refactored. Might be different timelines in the future.
     Timeline * timeline = global()->timeline();
     if(timeline)
     {
@@ -437,15 +440,6 @@ void MultiView::keyReleaseEvent(QKeyEvent *event)
 // toChange
 double MultiView::zoom() const { return activeView()->camera2D().zoom(); }
 
-void MultiView::toggleOutline()
-{
-    activeView()->toggleOutline();
-}
-
-void MultiView::toggleOutlineOnly()
-{
-    activeView()->toggleOutlineOnly();
-}
 void MultiView::setDisplayMode(ViewSettings::DisplayMode displayMode)
 {
     activeView()->setDisplayMode(displayMode);

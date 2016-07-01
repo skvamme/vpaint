@@ -35,11 +35,6 @@ ViewSettings::ViewSettings() :
 {
 }
 
-ViewSettings::~ViewSettings()
-{
-}
-
-
 Time ViewSettings::time() const
 {
     return time_;
@@ -72,31 +67,6 @@ void ViewSettings::setDisplayMode(DisplayMode mode)
     if(displayMode_ != mode)
     {
         displayMode_ = mode;
-    }
-}
-
-void ViewSettings::toggleOutline()
-{
-    if(displayMode() == ILLUSTRATION)
-    {
-        if(outlineOnly_)
-            setDisplayMode(OUTLINE);
-        else
-            setDisplayMode(ILLUSTRATION_OUTLINE);
-    }
-    else
-        setDisplayMode(ILLUSTRATION);
-}
-
-void ViewSettings::toggleOutlineOnly()
-{
-    if(displayMode() != ILLUSTRATION)
-    {
-        outlineOnly_ = !outlineOnly_;
-        if(outlineOnly_)
-            setDisplayMode(OUTLINE);
-        else
-            setDisplayMode(ILLUSTRATION_OUTLINE);
     }
 }
 
@@ -253,6 +223,238 @@ void ViewSettings::setOnionSkinsTransparencyRatio(double newValue)
 {
     onionSkinsTransparencyRatio_ = newValue;
 }
+
+
+
+
+
+/************************ MODEL ********************************/
+
+
+
+ViewSettingsModel::ViewSettingsModel(QObject * parent) :
+    QObject(parent),
+    data_()
+{
+}
+
+Time ViewSettingsModel::time() const
+{
+    return data_.time();
+}
+
+void ViewSettingsModel::setTime(const Time & t)
+{
+    if(ViewSettingsModel::time() == t)
+        return;
+
+    data_.setTime(t);
+
+    emit changed();
+}
+
+double ViewSettingsModel::zoom() const
+{
+    return data_.zoom();
+}
+
+void ViewSettingsModel::setZoom(double newValue)
+{
+    if(ViewSettingsModel::zoom() == newValue)
+        return;
+
+    data_.setZoom(newValue);
+
+    emit changed();
+}
+
+ViewSettings::DisplayMode ViewSettingsModel::displayMode() const
+{
+    return data_.displayMode();
+}
+
+void ViewSettingsModel::setDisplayMode(ViewSettings::DisplayMode mode)
+{
+    if(ViewSettingsModel::displayMode() == mode)
+        return;
+
+    data_.setDisplayMode(mode);
+
+    emit changed();
+}
+
+bool ViewSettingsModel::drawCursor() const
+{
+    return data_.drawCursor();
+}
+
+void ViewSettingsModel::setDrawCursor(bool newValue)
+{
+    if(ViewSettingsModel::drawCursor() == newValue)
+        return;
+
+    data_.setDrawCursor(newValue);
+
+    emit changed();
+}
+
+bool ViewSettingsModel::isMainDrawing() const
+{
+    return data_.isMainDrawing();
+}
+
+void ViewSettingsModel::setMainDrawing(bool newValue)
+{
+    if(ViewSettingsModel::isMainDrawing() == newValue)
+        return;
+
+    data_.setMainDrawing(newValue);
+
+    emit changed();
+}
+
+int ViewSettingsModel::vertexTopologySize() const
+{
+    return data_.vertexTopologySize();
+}
+void ViewSettingsModel::setVertexTopologySize(int newValue)
+{
+    if(ViewSettingsModel::vertexTopologySize() == newValue)
+        return;
+
+    data_.setVertexTopologySize(newValue);
+
+    emit changed();
+}
+
+int ViewSettingsModel::edgeTopologyWidth() const
+{
+    return data_.edgeTopologyWidth_;
+}
+
+void ViewSettingsModel::setEdgeTopologyWidth(int newValue)
+{
+    if(data_.edgeTopologyWidth_ != newValue)
+    {
+        data_.edgeTopologyWidth_ = newValue;
+    }
+}
+
+bool ViewSettingsModel::drawTopologyFaces() const
+{
+    return data_.drawTopologyFaces_;
+}
+void ViewSettingsModel::setDrawTopologyFaces(bool newValue)
+{
+    if(data_.drawTopologyFaces_ != newValue)
+    {
+        data_.drawTopologyFaces_ = newValue;
+    }
+}
+
+bool ViewSettingsModel::screenRelative() const
+{
+    return screenRelative_;
+}
+void ViewSettingsModel::setScreenRelative(bool newValue)
+{
+    if(data_.screenRelative_ != newValue)
+    {
+        data_.screenRelative_ = newValue;
+    }
+}
+
+
+
+
+
+bool ViewSettingsModel::onionSkinningIsEnabled() const
+{
+    return data_.onionSkinningIsEnabled_;
+}
+void ViewSettingsModel::setOnionSkinningIsEnabled(bool newValue)
+{
+    data_.onionSkinningIsEnabled_ = newValue;
+}
+
+bool ViewSettingsModel::areOnionSkinsPickable() const
+{
+    return data_.areOnionSkinsPickable_;
+}
+void ViewSettingsModel::setAreOnionSkinsPickable(bool newValue)
+{
+    data_.areOnionSkinsPickable_ = newValue;
+}
+
+int ViewSettingsModel::numOnionSkinsBefore() const
+{
+    return data_.numOnionSkinsBefore_;
+}
+void ViewSettingsModel::setNumOnionSkinsBefore(int newValue)
+{
+    data_.numOnionSkinsBefore_ = newValue;
+}
+
+int ViewSettingsModel::numOnionSkinsAfter() const
+{
+    return data_.numOnionSkinsAfter_;
+}
+void ViewSettingsModel::setNumOnionSkinsAfter(int newValue)
+{
+    data_.numOnionSkinsAfter_ = newValue;
+}
+
+Time ViewSettingsModel::onionSkinsTimeOffset() const
+{
+    return data_.onionSkinsTimeOffset_;
+}
+void ViewSettingsModel::setOnionSkinsTimeOffset(Time newValue)
+{
+   data_. onionSkinsTimeOffset_ = newValue;
+}
+
+void ViewSettingsModel::setOnionSkinsTimeOffset(double newValue)
+{
+    int intValue = newValue;
+    if(newValue == (double) intValue)
+        data_.onionSkinsTimeOffset_ = Time(intValue); // Exact frame
+    else
+        data_.onionSkinsTimeOffset_ = Time(newValue); // float time
+}
+
+double ViewSettingsModel::onionSkinsXOffset() const
+{
+    return data_.onionSkinsXOffset_;
+}
+void ViewSettingsModel::setOnionSkinsXOffset(double newValue)
+{
+    data_.onionSkinsXOffset_ = newValue;
+}
+
+double ViewSettingsModel::onionSkinsYOffset() const
+{
+    return data_.onionSkinsYOffset_;
+}
+void ViewSettingsModel::setOnionSkinsYOffset(double newValue)
+{
+    data_.onionSkinsYOffset_ = newValue;
+}
+
+double ViewSettingsModel::onionSkinsTransparencyRatio() const
+{
+    return data_.onionSkinsTransparencyRatio_;
+}
+void ViewSettingsModel::setOnionSkinsTransparencyRatio(double newValue)
+{
+    data_.onionSkinsTransparencyRatio_ = newValue;
+}
+
+
+
+
+/*********************** WIDGET ********************************/
+
+
 
 #include <QWidgetAction>
 #include <QMenuBar>

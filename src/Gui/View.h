@@ -37,6 +37,7 @@ class KeyEdge;
 class Time;
 class Background;
 class BackgroundRenderer;
+class TimeManager;
 
 // mouse event in scene coordinates
 struct MouseEvent 
@@ -54,7 +55,7 @@ class View: public GLWidget
     Q_OBJECT
     
 public:
-    View(Scene *scene, QWidget *parent);
+    View(TimeManager * timeManager, Scene * scene, QWidget * parent = nullptr);
     virtual ~View();
 
     void initCamera();
@@ -122,8 +123,6 @@ public slots:
     bool updateHoveredObject(int x, int y);
     void handleNewKeyboardModifiers();
 
-    void toggleOutline();
-    void toggleOutlineOnly();
     void setDisplayMode(ViewSettings::DisplayMode displayMode);
 
     void setOnionSkinningEnabled(bool enabled);
@@ -181,6 +180,9 @@ private:
     VectorAnimationComplex::VAC * vac_;
     VectorAnimationComplex::KeyVertex * ivertex_;
     VectorAnimationComplex::KeyEdge * iedge_;
+
+    // Time Manager
+    TimeManager * timeManager_;
 
     // View Settings
     ViewSettings viewSettings_;

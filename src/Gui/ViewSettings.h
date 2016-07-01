@@ -16,8 +16,8 @@
 class ViewSettings
 {
 public:
+    // Default values
     ViewSettings();
-    ~ViewSettings();
 
     // Display
     double zoom() const;
@@ -30,8 +30,6 @@ public:
     };
     DisplayMode displayMode() const;
     void setDisplayMode(DisplayMode mode);
-    void toggleOutline();
-    void toggleOutlineOnly();
 
     bool drawCursor() const;
     void setDrawCursor(bool newValue);
@@ -111,6 +109,77 @@ private:
     double onionSkinsXOffset_;
     double onionSkinsYOffset_;
     double onionSkinsTransparencyRatio_;
+};
+
+class ViewSettingsModel: public QObject
+{
+private:
+    Q_OBJECT
+    Q_DISABLE_COPY(ViewSettingsModel)
+
+public:
+    ViewSettingsModel(QObject * parent = nullptr);
+
+    // Display
+    double zoom() const;
+    void setZoom(double newValue);
+
+    ViewSettings::DisplayMode displayMode() const;
+    void setDisplayMode(ViewSettings::DisplayMode mode);
+
+    bool drawCursor() const;
+    void setDrawCursor(bool newValue);
+
+    bool isMainDrawing() const;
+    void setMainDrawing(bool newValue);
+
+    int vertexTopologySize() const;
+    void setVertexTopologySize(int newValue);
+
+    int edgeTopologyWidth() const;
+    void setEdgeTopologyWidth(int newValue);
+
+    bool drawTopologyFaces() const;
+    void setDrawTopologyFaces(bool newValue);
+
+    bool screenRelative() const;
+    void setScreenRelative(bool newValue);
+
+    Time time() const;
+    void setTime(const Time & t);
+
+    // Onion Skinning
+
+    bool onionSkinningIsEnabled() const;
+    void setOnionSkinningIsEnabled(bool newValue);
+
+    bool areOnionSkinsPickable() const;
+    void setAreOnionSkinsPickable(bool newValue);
+
+    int numOnionSkinsBefore() const;
+    void setNumOnionSkinsBefore(int newValue);
+
+    int numOnionSkinsAfter() const;
+    void setNumOnionSkinsAfter(int newValue);
+
+    Time onionSkinsTimeOffset() const;
+    void setOnionSkinsTimeOffset(Time newValue);
+    void setOnionSkinsTimeOffset(double newValue);
+
+    double onionSkinsXOffset() const;
+    void setOnionSkinsXOffset(double newValue);
+
+    double onionSkinsYOffset() const;
+    void setOnionSkinsYOffset(double newValue);
+
+    double onionSkinsTransparencyRatio() const;
+    void setOnionSkinsTransparencyRatio(double newValue);
+
+signals:
+    void changed();
+
+private:
+    ViewSettings data_;
 };
 
 #include <QFormLayout>

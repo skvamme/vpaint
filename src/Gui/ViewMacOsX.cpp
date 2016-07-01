@@ -13,10 +13,10 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 
-ViewMacOsX::ViewMacOsX(Scene *scene, QWidget *parent) :
+ViewMacOsX::ViewMacOsX(TimeManager * timeManager, Scene * scene, QWidget * parent) :
     QWidget(parent)
 {
-    view_ = new View(scene, this);
+    view_ = new View(timeManager, scene, this);
 
     QVBoxLayout * layout = new QVBoxLayout();
     layout->setMargin(0);

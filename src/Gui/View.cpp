@@ -47,13 +47,14 @@
 
 #define  PAINT_ACTION                                       400
 
-View::View(Scene * scene, QWidget * parent) :
+View::View(TimeManager * timeManager, Scene * scene, QWidget * parent) :
     GLWidget(parent, true),
     scene_(scene),
     pickingImg_(0),
     pickingIsEnabled_(true),
     currentAction_(0),
-    vac_(0)
+    vac_(0),
+    timeManager_(timeManager)
 {
     // Make renderers
     Background * bg = scene_->background();
@@ -1060,20 +1061,6 @@ void View::drawSceneDelegate_(Time t)
     // Draw current frame
     viewSettings_.setMainDrawing(true);
     scene_->draw(t, viewSettings_);
-}
-
-void View::toggleOutline()
-{
-    viewSettings_.toggleOutline();
-    viewSettingsWidget_->updateWidgetFromSettings();
-    update();
-}
-
-void View::toggleOutlineOnly()
-{
-    viewSettings_.toggleOutlineOnly();
-    viewSettingsWidget_->updateWidgetFromSettings();
-    update();
 }
 
 void View::setDisplayMode(ViewSettings::DisplayMode displayMode)

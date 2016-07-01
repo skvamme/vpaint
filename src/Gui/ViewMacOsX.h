@@ -21,13 +21,14 @@
 
 class View;
 class Scene;
+class TimeManager;
 
 class ViewMacOsX: public QWidget
 {
     Q_OBJECT
 
 public:
-    ViewMacOsX(Scene * scene, QWidget *parent);
+    ViewMacOsX(TimeManager * timeManager, Scene * scene, QWidget * parent = nullptr);
     View * view() const;
 
 private:

@@ -18,6 +18,7 @@ class View;
 class ViewMacOsX;
 class QSplitter;
 class GLWidget;
+class TimeManager;
 
 // typedef to solve the MacOSX / Win+Linux discrepency
 #ifdef Q_OS_MAC
@@ -33,7 +34,7 @@ class MultiView: public QWidget
     Q_OBJECT
     
 public:
-    MultiView(Scene *scene, QWidget *parent);
+    MultiView(TimeManager * timeManager, Scene * scene, QWidget * parent = nullptr);
     ~MultiView();
 
     void keyPressEvent(QKeyEvent *event);
@@ -62,8 +63,6 @@ public slots:
     void splitOne();
 
     // Display mode
-    void toggleOutline();
-    void toggleOutlineOnly();
     void setDisplayMode(ViewSettings::DisplayMode displayMode);
 
     void setOnionSkinningEnabled(bool enabled);
@@ -87,6 +86,7 @@ private:
     View * activeView_;
     View * hoveredView_;
     Scene * scene_;
+    TimeManager * timeManager_;
 
     // helper methods
     View * createView_();
