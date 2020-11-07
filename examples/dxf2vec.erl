@@ -5,13 +5,13 @@
 %% long as this license and the copyright notice above are preserved and
 %% not modified. There is no warranty for this software.
 
-%% dxf2vec:start(["proctor_heel_plug1.dxf","0"]).
+%% Latest Erlang www.erlang.org
+%% DXF R14 ASCII or Binary. AutoCAD or any CAD that can save as DXF R14.
 
+%% Start the erlang console and type:
+%% dxf2vec:start(["proctor_heel_plug.dxf","0"]).
+%% Copy-Paste the output from the console to a file.
 
-      % <face
-      %   id="11"
-      %   cycles="[3+] [6+] [4+] [5+] [7+] [8+] [9+] [0+] [1+] [2+]"
-      %   color="rgba(153,102,51,1)"/>
 
 -module(dxf2vec).
 -author(skvamme).
