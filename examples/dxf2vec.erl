@@ -5,7 +5,13 @@
 %% long as this license and the copyright notice above are preserved and
 %% not modified. There is no warranty for this software.
 
-%% dxf2vec:start(["spline.dxf","0"]).
+%% dxf2vec:start(["proctor_heel_plug1.dxf","0"]).
+
+
+      % <face
+      %   id="11"
+      %   cycles="[3+] [6+] [4+] [5+] [7+] [8+] [9+] [0+] [1+] [2+]"
+      %   color="rgba(153,102,51,1)"/>
 
 -module(dxf2vec).
 -author(skvamme).
@@ -186,9 +192,9 @@ drawSegment([{10,X1}|[{10,X2}|_]],[{20,Y1}|[{20,Y2}|_]],[{42,B1}|_]) when
 	Rad = radius(X1,Y1,Xcen,Ycen),
 	St_ang = fixang(ang(X1,Y1,Xcen,Ycen)), 
 	End_ang = fixang(ang(X2,Y2,Xcen,Ycen)),
-	io:format("<!-- ctx.arc(~.3f,~.3f,~.3f,~.3f,~.3f,~p); -->~n",[Xcen,Ycen,Rad,St_ang,End_ang,B1<0]); 
+	io:format("<!-- ctx.arc(~.12f,~.12f,~.12f,~.12f,~.12f,~p); -->~n",[Xcen,Ycen,Rad,St_ang,End_ang,B1<0]); 
 drawSegment([{10,X1}|_],[{20,Y1}|_],_) -> 
-	io:format("<!-- ctx.lineTo(~.3f,~.3f); -->~n",[X1,Y1]).
+	io:format("<!-- ctx.lineTo(~.12f,~.12f); -->~n",[X1,Y1]).
 
 %****************************************************************************
 % Draw a polyline segment
@@ -201,9 +207,9 @@ drawSegment(B2,X1,Y1,X2,Y2) when
 	Rad = radius(X1,Y1,Xcen,Ycen),
 	St_ang = fixang(ang(X1,Y1,Xcen,Ycen)), 
 	End_ang = fixang(ang(X2,Y2,Xcen,Ycen)),
-	io:format("<!-- ctx.arc(~.3f,~.3f,~.3f,~.3f,~.3f,~p); -->~n",[Xcen,Ycen,Rad,St_ang,End_ang,B2<0]); 
+	io:format("<!-- ctx.arc(~.12f,~.12f,~.12f,~.12f,~.12f,~p); -->~n",[Xcen,Ycen,Rad,St_ang,End_ang,B2<0]); 
 drawSegment(_,_,_,X2,Y2) -> % This is a line segment
-	io:format("ctx.lineTo(~.3f,~.3f);~n",[X2,Y2]).
+	io:format("<!-- ctx.lineTo(~.12f,~.12f);  -->~n",[X2,Y2]).
 
 %****************************************************************************
 % Fill or stroke the lwpolyline
@@ -228,7 +234,7 @@ doLWPoly(Closed,FirstVertex,G42list,G10list,G20list) ->
 % Draw a spline segment
 %****************************************************************************
 drawSplineSegment([{10,X1}|_],[{20,Y1}|_]) -> 
-	io:format("~.3f,~.3f,1 ",[X1,Y1]).
+	io:format("~.12f,~.12f,1 ",[X1,Y1]).
 
 %****************************************************************************
 % Fill or stroke the spline
@@ -236,14 +242,14 @@ drawSplineSegment([{10,X1}|_],[{20,Y1}|_]) ->
 doSpline(Closed,_FirstPoint,[],[]) ->
 	case Closed of 
 		1 -> io:format("<!-- Spline closed -->~n");
-		_ -> io:format(")\"  color=\"rgba(0,0,0,1)\"/> ~n<!-- Spline open -->~n")
+		_ -> io:format(")\"  ~ncolor=\"rgba(0,0,0,1)\"/> ~n")
 	end;
 doSpline(Closed,FirstPoint,G10list,G20list) ->
 	[{10,_X1}|G10tail] = G10list,
 	[{20,_Y1}|G20tail] = G20list,
 	case FirstPoint of
 		1 -> 	I = get(edge),
-					io:format("<edge id=\"~p\" curve=\"xywdense(5 ",[I]),
+					io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ",[I]),
 					put(edge,I+1),
 					doSpline(Closed,0,G10list,G20list);
 		_ ->  drawSplineSegment(G10list,G20list),
@@ -273,13 +279,13 @@ print_entity({_,"SOLID",Entity},_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	setColor(Pen),
 	I = get(edge),
-	io:format("<edge id=\"~p\" curve=\"xywdense(5 ~.3f,~.3f,1 ~.3f,~.3f,1)\" color=\"rgba(0,0,0,1)\" />~n",
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=\"rgba(0,0,0,1)\" />~n",
 		[I,X1,Y1,X2,Y2]),
-	io:format("<edge id=\"~p\" curve=\"xywdense(5 ~.3f,~.3f,1 ~.3f,~.3f,1)\" color=\"rgba(0,0,0,1)\" />~n",
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=\"rgba(0,0,0,1)\" />~n",
 		[I+1,X2,Y2,X3,Y3]),
-	io:format("<edge id=\"~p\" curve=\"xywdense(5 ~.3f,~.3f,1 ~.3f,~.3f,1)\" color=\"rgba(0,0,0,1)\" />~n",
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=\"rgba(0,0,0,1)\" />~n",
 		[I+2,X3,Y3,X4,Y4]),
-	io:format("<edge id=\"~p\" curve=\"xywdense(5 ~.3f,~.3f,1 ~.3f,~.3f,1)\" color=\"rgba(0,0,0,1)\" />~n",
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=\"rgba(0,0,0,1)\" />~n",
 		[I+4,X4,Y4,X1,Y1]),
 	put(edge,I+4);
 	
@@ -291,7 +297,7 @@ print_entity({_,"LINE",Entity},_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	setColor(Pen),
 	I = get(edge),
-	io:format("<edge id=\"~p\" curve=\"xywdense(5 ~.3f,~.3f,1 ~.3f,~.3f,1)\" color=\"rgba(0,0,0,1)\" />~n",
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=\"rgba(0,0,0,1)\" />~n",
 		[I,X1,Y1,X2,Y2]),
 	put(edge,I+1);
 
@@ -301,7 +307,7 @@ print_entity({_,"POINT",Entity},_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	I = get(vertex),
 	setColor(Pen),
-	io:format("<vertex id=\"~p\" position=\"~.3f ~.3f\" color=\"rgba(0,0,0,1)\" />~n",[I,X1,Y1]),
+	io:format("<vertex ~nid=\"~p\" ~nposition=\"~.12f ~.12f\" ~ncolor=\"rgba(0,0,0,1)\" />~n",[I,X1,Y1]),
 	put(vertex,I+1);
 
 print_entity({_,"SPLINE",Entity},_) ->
@@ -439,12 +445,13 @@ find_header1({B,_,_}) -> find_header1(parse_dxf(B)).
 %****************************************************************************
 print_header(B) ->
 	io:format("<?xml version=\"1.0\" encoding=\"UTF-8\"?>~n",[]),
-	io:format("<vec version=\"1.7\">~n",[]),
-	io:format("<playback framerange=\"0 47\" fps=\"24\" subframeinbetweening=\"off\" playmode=\"normal\"/>~n",[]),
-	io:format("<canvas position=\"0 0\" size=\"1280 720\"/>~n",[]),
-	io:format("<layer name=\"Layer 1\" visible=\"true\">~n",[]),
-	io:format("<background color=\"rgba(255,255,255,1)\" image=\"\" position=\"0 0\"~n",[]), 
-	io:format("size=\"cover\" repeat=\"norepeat\" opacity=\"1\" hold=\"yes\"/>~n",[]),
+	io:format("<!-- Created with dxf2vec -->~n~n",[]),
+	io:format("<vec ~nversion=\"1.7\">~n",[]),
+	io:format("<playback ~nframerange=\"0 47\" ~nfps=\"24\" ~nsubframeinbetweening=\"off\" ~nplaymode=\"normal\"/>~n",[]),
+	io:format("<canvas ~nposition=\"0 0\" ~nsize=\"400 200\"/>~n",[]),
+	io:format("<layer ~nname=\"Layer 1\" ~nvisible=\"true\">~n",[]),
+	io:format("<background ~ncolor=\"rgba(255,255,255,1)\" ~nimage=\"\" ~nposition=\"0 0\"~n",[]), 
+	io:format("size=\"cover\" ~nrepeat=\"norepeat\" ~nopacity=\"1\" ~nhold=\"yes\"/>~n",[]),
 	limits(B),
 	io:format("<objects>~n",[]).
 	
