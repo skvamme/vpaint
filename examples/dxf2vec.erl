@@ -58,7 +58,7 @@ start(Args) ->
 				{ok, B} = file:read_file(DXF),
 				{_,B1} = split_binary(B, 22),
 				B2 = find_header(B1),
-				limits(B2),
+				%limits(B2),
 				print_header(),
 				B3 = find_entities(B2),
 				entities(Etable,B3,Layer)
