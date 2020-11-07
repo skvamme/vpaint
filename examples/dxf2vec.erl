@@ -47,15 +47,19 @@ start(Args) ->
 			error -> io:format("//Cannot read file: ~p~n",[DXF]);
 			ascii ->
 				{ok, F} = file:open(DXF, read),
-				print_header(ascii),
+				find_header_ascii(F),
+				{{_X1,[]},{_Y1,[]},{_X2,[]},{_Y2,[]}} = limits_ascii(F),
+				%io:format("Limits: ~p~n",[{X1,Y1,X2,Y2}]),
+				print_header(),
 				find_entities_ascii(F),
-				%io:get_line(F, ''), % get rid of "  0"
+				io:get_line(F, ''), % get rid of "  0"
 				entities_ascii(F,Etable,Layer,trim(io:get_line(F, '')));
 			bin -> 
 				{ok, B} = file:read_file(DXF),
 				{_,B1} = split_binary(B, 22),
 				B2 = find_header(B1),
-				print_header(B2),
+				limits(B2),
+				print_header(),
 				B3 = find_entities(B2),
 				entities(Etable,B3,Layer)
 		end, %io:format("About to print_entities~n",[]),
@@ -71,6 +75,42 @@ find_entities_ascii(F) -> fea(F,"").
 fea(_F,"ENTITIES") -> ok;
 fea(_F,eof) -> io:format("Didn't find entities section~n",[]),erlang:halt();
 fea(F,_) -> fea(F,trim(io:get_line(F, ''))).
+	
+%****************************************************************************************
+% Function find_header_ascii(F1), 
+%****************************************************************************************
+find_header_ascii(F) -> fha(F,"").
+
+fha(_F,"HEADER") -> ok;
+fha(_F,eof) -> io:format("Didn't find header section~n",[]),erlang:halt();
+fha(F,_) -> fha(F,trim(io:get_line(F, ''))).
+
+
+%****************************************************************************************
+% Function limits_ascii(F)
+% $PLIMMAX and $PLIMMIN are for q-cad, set with paper size
+%****************************************************************************************
+limits_ascii(F) -> limits_ascii(F,{undefined,undefined,undefined,undefined}).
+
+limits_ascii(_F,{X1,Y1,X2,Y2}) when X1 /= undefined andalso X2 /= undefined -> {X1,Y1,X2,Y2};
+limits_ascii(F,{X1,Y1,X2,Y2}) ->
+	Params = case trim(io:get_line(F, '')) of
+		"$EXTMIN" -> trim(io:get_line(F, '')),X = string:to_float(trim(io:get_line(F, ''))),
+			trim(io:get_line(F, '')),Y = string:to_float(trim(io:get_line(F, ''))),
+			{X,Y,X2,Y2};
+		"$PLIMMIN" -> trim(io:get_line(F, '')),X = string:to_float(trim(io:get_line(F, ''))),
+			trim(io:get_line(F, '')),Y = string:to_float(trim(io:get_line(F, ''))),
+			{X,Y,X2,Y2};
+		"$EXTMAX" -> trim(io:get_line(F, '')),X = string:to_float(trim(io:get_line(F, ''))),
+			trim(io:get_line(F, '')),Y = string:to_float(trim(io:get_line(F, ''))),
+			{X1,Y1,X,Y};
+		"$PLIMMAX" -> trim(io:get_line(F, '')),X = string:to_float(trim(io:get_line(F, ''))),
+			trim(io:get_line(F, '')),Y = string:to_float(trim(io:get_line(F, ''))),
+			{X1,Y1,X,Y};
+		eof -> io:format("Didn't find drawing limits~n",[]),erlang:halt();
+		_ -> {X1,Y1,X2,Y2}
+	end,
+	limits_ascii(F,Params).
 	
 %****************************************************************************************
 % Function entities_ascii(Etable,F1)
@@ -93,8 +133,7 @@ e_a(_F,_Etable,_Gtable,_Layer,_E,eof) -> ok;
 e_a(_F,Etable,Gtable,Layer,E,"0") -> % end of this entity
 	params(Gtable,Etable,Layer,E,'end',0);
 e_a(F,Etable,Gtable,Layer,E,G) ->
-	io:format("G is: ~p, E is: ~p ~n",[G,E]),
-	G1 = list_to_integer(E),
+	G1 = list_to_integer(G),
 	V = format_value(G1,trim(io:get_line(F, ''))), 
 	params(Gtable,Etable,Layer,E,V,G1),
 	e_a(F,Etable,Gtable,Layer,E,trim(io:get_line(F, ''))).
@@ -443,7 +482,7 @@ find_header1({B,_,_}) -> find_header1(parse_dxf(B)).
 %****************************************************************************
 % Print the header section in the vec file
 %****************************************************************************
-print_header(B) ->
+print_header() ->
 	io:format("<?xml version=\"1.0\" encoding=\"UTF-8\"?>~n",[]),
 	io:format("<!-- Created with dxf2vec -->~n~n",[]),
 	io:format("<vec ~nversion=\"1.7\">~n",[]),
@@ -452,13 +491,11 @@ print_header(B) ->
 	io:format("<layer ~nname=\"Layer 1\" ~nvisible=\"true\">~n",[]),
 	io:format("<background ~ncolor=\"rgba(255,255,255,1)\" ~nimage=\"\" ~nposition=\"0 0\"~n",[]), 
 	io:format("size=\"cover\" ~nrepeat=\"norepeat\" ~nopacity=\"1\" ~nhold=\"yes\"/>~n",[]),
-	limits(B),
 	io:format("<objects>~n",[]).
 	
 %****************************************************************************
 % Write the size of the drawing
 %****************************************************************************
-limits(ascii) -> ok; % Not implemented for ascii files
 limits(B) -> limits1({B,"",0}).
 
 limits1({B,"$EXTMIN",9}) -> 
