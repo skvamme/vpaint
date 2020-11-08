@@ -262,7 +262,7 @@ fixang(Ang) -> Ang.
 %****************************************************************************************
 % Draw an lwpolyline segment
 %****************************************************************************************
-drawSegment([{10,X1}|[{10,X2}|_]],[{20,Y1}|[{20,Y2}|_]],[{42,B1}|_]) when 
+drawLWSegment([{10,X1}|[{10,X2}|_]],[{20,Y1}|[{20,Y2}|_]],[{42,B1}|_],_) when 
 		(B1 > 0.000063) or (B1 < -0.000063) -> % Arc ahead
 	Cbce = cotbce(B1), 
 	Ycen = ycenter(X1,X2,Y1,Y2,Cbce),
@@ -271,8 +271,8 @@ drawSegment([{10,X1}|[{10,X2}|_]],[{20,Y1}|[{20,Y2}|_]],[{42,B1}|_]) when
 	St_ang = fixang(ang(X1,Y1,Xcen,Ycen)), 
 	End_ang = fixang(ang(X2,Y2,Xcen,Ycen)),
 	io:format("<!-- ctx.arc(~.12f,~.12f,~.12f,~.12f,~.12f,~p); -->~n",[Xcen,Ycen,Rad,St_ang,End_ang,B1<0]); 
-drawSegment([{10,X1}|_],[{20,Y1}|_],_) -> 
-	io:format("<!-- ctx.lineTo(~.12f,~.12f); -->~n",[X1,Y1]).
+drawLWSegment([{10,X1}|_],[{20,Y1}|_],_,Width) -> 
+	io:format("~.12f,~.12f,~.2f ",[X1,Y1,Width]).
 
 %****************************************************************************************
 % Draw a polyline segment
@@ -292,20 +292,22 @@ drawSegment(_,_,_,X2,Y2) ->
 %****************************************************************************************
 % Fill or stroke the lwpolyline
 %****************************************************************************************
-doLWPoly(Closed,_FirstVertex,[],[],[]) ->
+doLWPoly(Closed,_FirstVertex,[],[],[],Color,_Width) ->
 	case Closed of 
 		1 -> io:format("<!-- ctx.fill(); -->~n");
-		_ -> io:format("<!-- ctx.stroke(); -->~n")
+		_ -> io:format(")\"  ~ncolor=~p/> ~n",[Color])
 	end;
-doLWPoly(Closed,FirstVertex,G42list,G10list,G20list) ->
+doLWPoly(Closed,FirstVertex,G42list,G10list,G20list,Color,Width) ->
 	[_|G42tail] = G42list,
 	[{10,_X1}|G10tail] = G10list,
 	[{20,_Y1}|G20tail] = G20list,
 	case FirstVertex of
-		1 -> 	io:format("<!-- ctx.beginPath(); -->~n"),
-				doLWPoly(Closed,0,G42list,G10list,G20list);
-		_ ->  drawSegment(G10list,G20list,G42list),
-				doLWPoly(Closed,0,G42tail,G10tail,G20tail)
+		1 -> 	I = get(edge),
+				io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ",[I]),
+				put(edge,I+1),
+				doLWPoly(Closed,0,G42list,G10list,G20list,Color,Width);
+		_ ->  drawLWSegment(G10list,G20list,G42list,Width),
+				doLWPoly(Closed,0,G42tail,G10tail,G20tail,Color,Width)
 	end.
 
 %****************************************************************************************
@@ -317,32 +319,44 @@ drawSplineSegment([{10,X1}|_],[{20,Y1}|_]) ->
 %****************************************************************************************
 % Fill or stroke the spline
 %****************************************************************************************
-doSpline(Closed,_FirstPoint,[],[]) ->
+doSpline(Closed,_FirstPoint,[],[],Color) ->
 	case Closed of 
 		1 -> io:format("<!-- Spline closed -->~n");
-		_ -> io:format(")\"  ~ncolor=\"rgba(0,0,0,1)\"/> ~n")
+		_ -> io:format(")\"  ~ncolor=~p/>~n",[Color])
 	end;
-doSpline(Closed,FirstPoint,G10list,G20list) ->
+doSpline(Closed,FirstPoint,G10list,G20list,Color) ->
 	[{10,_X1}|G10tail] = G10list,
 	[{20,_Y1}|G20tail] = G20list,
 	case FirstPoint of
 		1 -> 	I = get(edge),
 					io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ",[I]),
 					put(edge,I+1),
-					doSpline(Closed,0,G10list,G20list);
+					doSpline(Closed,0,G10list,G20list,Color);
 		_ ->  drawSplineSegment(G10list,G20list),
-				doSpline(Closed,0,G10tail,G20tail)
+				doSpline(Closed,0,G10tail,G20tail,Color)
 	end.
 
 %****************************************************************************************
-% Set current drawing color if it is new
+% Set current drawing color
 %****************************************************************************************
-setColor(Pen) ->
-	case get(color) /= Pen of
-   		true -> put(color,Pen),
-   			io:format("<!-- Color ~p -->~n",[Pen]);
-		_ -> ok
-end.
+setColor(Pen,A) ->
+	case is_integer(A) of
+		true -> Alpha = integer_to_list(A);
+		_ -> [Alpha] = io_lib:format("~.2f",[A])
+	end,
+
+	case Pen of
+		0 -> "rgba(0,0,0," ++ Alpha ++ ")";
+		1 -> "rgba(255,0,0," ++ Alpha ++ ")";
+		2 -> "rgba(255,255,0," ++ Alpha ++ ")";
+		3 -> "rgba(0,255,0," ++ Alpha ++ ")";
+		4 -> "rgba(0,255,255," ++ Alpha ++ ")";
+		5 -> "rgba(0,0,255," ++ Alpha ++ ")";
+		6 -> "rgba(255,0,255," ++ Alpha ++ ")";
+		7 -> "rgba(255,255,255," ++ Alpha ++ ")";
+		8 -> "rgba(0,0,0," ++ Alpha ++ ")";
+		_ -> "rgba(0,0,0," ++ Alpha ++ ")"
+	end.
 	
 %****************************************************************************************
 % Print an entity
@@ -355,16 +369,16 @@ print_entity({_,"SOLID",Entity},_) ->
 	[{_,X3}|_] = lookup(Entity, 13),[{_,Y3}|_] = lookup(Entity, 23),
 	[{_,X4}|_] = lookup(Entity, 11),[{_,Y4}|_] = lookup(Entity, 21),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
-	setColor(Pen),
+	Color = setColor(Pen,1),
 	I = get(edge),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=\"rgba(0,0,0,1)\" />~n",
-		[I,X1,Y1,X2,Y2]),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=\"rgba(0,0,0,1)\" />~n",
-		[I+1,X2,Y2,X3,Y3]),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=\"rgba(0,0,0,1)\" />~n",
-		[I+2,X3,Y3,X4,Y4]),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=\"rgba(0,0,0,1)\" />~n",
-		[I+4,X4,Y4,X1,Y1]),
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
+		[I,X1,Y1,X2,Y2,Color]),
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
+		[I+1,X2,Y2,X3,Y3,Color]),
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
+		[I+2,X3,Y3,X4,Y4,Color]),
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
+		[I+4,X4,Y4,X1,Y1,Color]),
 	put(edge,I+4);
 	
 print_entity({_,"LINE",Entity},_) ->
@@ -373,10 +387,10 @@ print_entity({_,"LINE",Entity},_) ->
 	[{_,X2}|_] = lookup(Entity, 11),
 	[{_,Y2}|_] = lookup(Entity, 21),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
-	setColor(Pen),
+	Color = setColor(Pen,1),
 	I = get(edge),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=\"rgba(0,0,0,1)\" />~n",
-		[I,X1,Y1,X2,Y2]),
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
+		[I,X1,Y1,X2,Y2,Color]),
 	put(edge,I+1);
 
 print_entity({_,"POINT",Entity},_) ->
@@ -384,16 +398,16 @@ print_entity({_,"POINT",Entity},_) ->
 	[{_,Y1}|_] = lookup(Entity, 20),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	I = get(vertex),
-	setColor(Pen),
-	io:format("<vertex ~nid=\"~p\" ~nposition=\"~.12f ~.12f\" ~ncolor=\"rgba(0,0,0,1)\" />~n",[I,X1,Y1]),
+	Color = setColor(Pen,1),
+	io:format("<vertex ~nid=\"~p\" ~nposition=\"~.12f ~.12f\" ~ncolor=~p />~n",[I,X1,Y1,Color]),
 	put(vertex,I+1);
 
 print_entity({_,"SPLINE",Entity},_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
  	G10list = lookup(Entity, 10),
  	G20list = lookup(Entity, 20),
-	setColor(Pen),
-	doSpline(0,1,G10list,G20list);
+	Color = setColor(Pen,1),
+	doSpline(0,1,G10list,G20list,Color);
 	
 print_entity({_,"ARC",Entity},_) ->
 	[{_,_X1}|_] = lookup(Entity, 10),
@@ -402,7 +416,7 @@ print_entity({_,"ARC",Entity},_) ->
 	[{_,_Startangle}|_] = lookup(Entity, 50),
 	[{_,_Endangle}|_] = lookup(Entity, 51),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
-	setColor(Pen),
+	_Color = setColor(Pen,1),
 	io:format("<!-- ToDo: ARC -->~n",[]);
 
 print_entity({_,"ELLIPSE",Entity},_) -> 
@@ -416,20 +430,21 @@ print_entity({_,"ELLIPSE",Entity},_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	_Rot = ang(RadiusX,RadiusY,0,0),
 	_R = radius(RadiusX,RadiusY,0,0),
-	setColor(Pen),
+	_Color = setColor(Pen,1),
 	io:format("<!-- ToDo: ELLIPSE -->~n",[]);
 
 print_entity({_,"CIRCLE",Entity},_) ->
 	[{_,_X1}|_] = lookup(Entity, 10),
-  [{_,_Y1}|_] = lookup(Entity, 20),
+  	[{_,_Y1}|_] = lookup(Entity, 20),
 	[{_,_Radius}|_] = lookup(Entity, 40),
-  [{_,Pen}|_] = reverse(lookup(Entity, 62)),
-	setColor(Pen),
+  	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
+	_Color = setColor(Pen,1),
 	io:format("<!-- ToDo: CIRCLE -->~n",[]);
 
 print_entity({_,"POLYLINE",Entity},Ttable) -> 
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)), 
-	setColor(Pen),
+	[{_,_Width}|_] = lookup_safe(Entity, 43),
+	_Color = setColor(Pen,1),
 	Closed = lookup_safe(Entity, 70), 
 	insert(Ttable,{firstvertex,1}),
 	insert(Ttable,{flags,Closed});
@@ -472,10 +487,13 @@ print_entity({_,"SEQEND",_Entity},Ttable) ->
 
 print_entity({_,"LWPOLYLINE",Entity},_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)), 
-	setColor(Pen),
 	G10list = lookup(Entity, 10),
 	G20list = lookup(Entity, 20),
-	fixBulgelist(Entity,length(lookup(Entity, 10)),length(lookup(Entity, 42))),
+	%[{_,Width}|_] = lookup(Entity, 43),
+	Width = lookup_safe(Entity, 43),
+	%io:format("Width: ~p",[Width]),
+	Color = setColor(Pen,1),
+	fixBulgelist(Entity,length(lookup(Entity, 10)),length(lookup(Entity, 42))), 
 	Bulgelist = lookup(Entity, 42),
 	[{70,Closed}] = lookup(Entity, 70),
 	case Closed of
@@ -486,7 +504,7 @@ print_entity({_,"LWPOLYLINE",Entity},_) ->
 	   		G20list1 = G20list,
 	   		Bulgelist1 = Bulgelist
 	end,
-   doLWPoly(Closed,1,Bulgelist1,G10list1,G20list1);
+   doLWPoly(Closed,1,Bulgelist1,G10list1,G20list1,Color,Width);
 
 print_entity({_,_Name,_Entity},_) -> ok.
 %		List = ets:tab2list(_Entity),
