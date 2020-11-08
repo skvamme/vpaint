@@ -5,13 +5,22 @@
 %% long as this license and the copyright notice above are preserved and
 %% not modified. There is no warranty for this software.
 
-%% Latest Erlang www.erlang.org
-%% DXF R14 ASCII or Binary. AutoCAD or any CAD that can save as DXF R14.
+%% Download latest Erlang from www.erlang.org or use apt-get or similar package manager.
+%% Use AutoCAD or any CAD that can save as DXF R14, ASCII or Binary.
 
-%% Start the erlang console and type:
+%% Compile dxf2vec.erl: erlc dxf2vec.erl
+
+%% Start the erlang console with erl
+%% To konvert layer 0 type
 %% dxf2vec:start(["proctor_heel_plug.dxf","0"]).
-%% Copy-Paste the output from the console to a file.
+%% To convert layer 0 and 1 type:
+%% dxf2vec:start(["proctor_heel_plug.dxf","0,1"]).
 
+%% Copy-Paste the output from the console to a file "anyname.vec"
+
+%% Use TRACE, SOLID, SPLINE (closed), POINT, LINE in AutoCAD.
+%% Other drawing primitives will be implemented later.
+%% An ellipse can be made a spline by offsetting it, erase the ellipse and offset back.
 
 -module(dxf2vec).
 -author(skvamme).
@@ -32,17 +41,19 @@
 %% 100619	Changed output format from erlang to Javascript				S Kvamme
 %% 201026	Changed output format from Javascript to VPaint vec			S Kvamme
 
-%****************************************************************************
+%****************************************************************************************
 % Read dxf file and otput corresponding vec source for VPaint graphics
-%****************************************************************************
+%****************************************************************************************
 start(Args) ->
 	DXF = hd(Args),
-	Layerarray = tl(Args),
-	Etable = ets:new(entity,[duplicate_bag,private]), % Store all the entities in this table
-	Ttable = ets:new(tmp,[set,private]), % Store temporary group values here
+	Layerarray = string:tokens(lists:flatten(tl(Args)),",+"),
 	put(edge,0), % holds edge numbering
 	put(vertex,0), % holds vertex numbering, vill be an ets with x and y
+	print_header(),
 	lists:foreach( fun(Layer) -> 
+		Etable = ets:new(entity,[duplicate_bag,private]), % Store all the entities in this table
+		Ttable = ets:new(tmp,[set,private]), % Store temporary group values here
+		print_layer_header(Layer),
 		case read_dxf_tag(DXF) of
 			error -> io:format("//Cannot read file: ~p~n",[DXF]);
 			ascii ->
@@ -50,22 +61,50 @@ start(Args) ->
 				find_header_ascii(F),
 				{{_X1,[]},{_Y1,[]},{_X2,[]},{_Y2,[]}} = limits_ascii(F),
 				%io:format("Limits: ~p~n",[{X1,Y1,X2,Y2}]),
-				print_header(),
 				find_entities_ascii(F),
 				io:get_line(F, ''), % get rid of "  0"
-				entities_ascii(F,Etable,Layer,trim(io:get_line(F, '')));
+				entities_ascii(F,Etable,string:to_upper(Layer),trim(io:get_line(F, '')));
 			bin -> 
 				{ok, B} = file:read_file(DXF),
 				{_,B1} = split_binary(B, 22),
 				B2 = find_header(B1),
 				%limits(B2),
-				print_header(),
 				B3 = find_entities(B2),
-				entities(Etable,B3,Layer)
-		end, %io:format("About to print_entities~n",[]),
-			prints_entities(Etable,Ttable) end,Layerarray),
-		io:format("</objects>~n</layer>~n"),
-		io:format("</vec>~n").
+				entities(Etable,B3,string:to_upper(Layer))
+		end, 
+			prints_entities(Etable,Ttable),
+			print_layer_trailer()
+		end,Layerarray),
+		print_trailer().
+
+%****************************************************************************************
+% Print the header section in the vec file
+%****************************************************************************************
+print_header() ->
+	io:format("<?xml version=\"1.0\" encoding=\"UTF-8\"?>~n",[]),
+	io:format("<!-- Created with dxf2vec -->~n~n",[]),
+	io:format("<vec ~nversion=\"1.7\">~n",[]),
+	io:format("<playback ~nframerange=\"0 47\" ~nfps=\"24\" ~nsubframeinbetweening=\"off\" ~nplaymode=\"normal\"/>~n",[]),
+	io:format("<canvas ~nposition=\"0 0\" ~nsize=\"400 200\"/>~n",[]).
+
+%****************************************************************************************
+% Print the layerheader section in the vec file
+%****************************************************************************************
+print_layer_header(Layer) ->
+	io:format("~n<layer ~nname=~p ~nvisible=\"true\">~n",[Layer]),
+	io:format("<background ~ncolor=\"rgba(255,255,255,1)\" ~nimage=\"\" ~nposition=\"0 0\"~n",[]), 
+	io:format("size=\"cover\" ~nrepeat=\"norepeat\" ~nopacity=\"1\" ~nhold=\"yes\"/>~n",[]),
+	io:format("<objects>~n",[]).
+
+%****************************************************************************************
+% Print the layertrailer section in the vec file
+%****************************************************************************************
+print_layer_trailer() -> io:format("</objects>~n</layer>~n").
+
+%****************************************************************************************
+% Print the trailer section in the vec file
+%****************************************************************************************
+print_trailer() -> io:format("</vec>~n").
 
 %****************************************************************************************
 % Function find_entities_ascii(F1), 
@@ -150,9 +189,9 @@ strip([$\r | Cs]) -> strip(Cs);
 strip([$\n | Cs]) -> strip(Cs);
 strip(Cs) -> Cs.
 
-%****************************************************************************
+%****************************************************************************************
 % Check that this is a binary DXF
-%****************************************************************************
+%****************************************************************************************
 read_dxf_tag(File) -> 
 	case file:open(File, [read,binary,raw]) of
 		{ok, S} ->
@@ -167,9 +206,9 @@ read_dxf_tag(File) ->
 	parse_tag(<<$A,$u,$t,$o,$C,$A,$D,$\s,$B,$i,$n,$a,$r,$y,$\s,$D,$X,$F>>) -> bin; 	
 	parse_tag(_) -> ascii. 
 
-%****************************************************************************
+%****************************************************************************************
 % Print all the entities, lowest thickness first
-%****************************************************************************
+%****************************************************************************************
 prints_entities(Etable,Ttable) ->
 	Elevlist = elevations(Etable),
 	prints_entities1(Elevlist,Etable,Ttable).
@@ -180,9 +219,9 @@ prints_entities1([E|Tail],Etable,Ttable) ->
 	lists:foreach(fun (Entity) -> print_entity(Entity,Ttable) end, Entitytuplelist),
 	prints_entities1(Tail,Etable,Ttable).
 
-%****************************************************************************
+%****************************************************************************************
 % Create a sorted list with all unique Thicknesses
-%****************************************************************************
+%****************************************************************************************
 elevations(Etable) -> 
 	Key = ets:first(Etable),
 	Elevlist = elevation1(Etable,[],Key),
@@ -193,9 +232,9 @@ elevation1(Etable,Elevlist,Key) ->
 	Key1 = ets:next(Etable,Key),
 	elevation1(Etable,[Key|Elevlist],Key1).
 
-%****************************************************************************
+%****************************************************************************************
 % Math functions
-%****************************************************************************
+%****************************************************************************************
 rtod(R) -> R * 180 / pi().
 
 dtor(D) -> D * pi() / 180.
@@ -220,9 +259,9 @@ ang(X1,Y1,Xcen,Ycen) -> atan2((Y1 - Ycen),(X1 - Xcen)).
 fixang(Ang) when Ang < 0.0 -> Ang + (2 * pi());
 fixang(Ang) -> Ang.
 
-%****************************************************************************
+%****************************************************************************************
 % Draw an lwpolyline segment
-%****************************************************************************
+%****************************************************************************************
 drawSegment([{10,X1}|[{10,X2}|_]],[{20,Y1}|[{20,Y2}|_]],[{42,B1}|_]) when 
 		(B1 > 0.000063) or (B1 < -0.000063) -> % Arc ahead
 	Cbce = cotbce(B1), 
@@ -235,9 +274,9 @@ drawSegment([{10,X1}|[{10,X2}|_]],[{20,Y1}|[{20,Y2}|_]],[{42,B1}|_]) when
 drawSegment([{10,X1}|_],[{20,Y1}|_],_) -> 
 	io:format("<!-- ctx.lineTo(~.12f,~.12f); -->~n",[X1,Y1]).
 
-%****************************************************************************
+%****************************************************************************************
 % Draw a polyline segment
-%****************************************************************************
+%****************************************************************************************
 drawSegment(B2,X1,Y1,X2,Y2) when
 			(B2 > 0.000063) or (B2 < -0.000063) -> 
 	Cbce = cotbce(B2), 
@@ -247,12 +286,12 @@ drawSegment(B2,X1,Y1,X2,Y2) when
 	St_ang = fixang(ang(X1,Y1,Xcen,Ycen)), 
 	End_ang = fixang(ang(X2,Y2,Xcen,Ycen)),
 	io:format("<!-- ctx.arc(~.12f,~.12f,~.12f,~.12f,~.12f,~p); -->~n",[Xcen,Ycen,Rad,St_ang,End_ang,B2<0]); 
-drawSegment(_,_,_,X2,Y2) -> % This is a line segment
+drawSegment(_,_,_,X2,Y2) -> 
 	io:format("<!-- ctx.lineTo(~.12f,~.12f);  -->~n",[X2,Y2]).
 
-%****************************************************************************
+%****************************************************************************************
 % Fill or stroke the lwpolyline
-%****************************************************************************
+%****************************************************************************************
 doLWPoly(Closed,_FirstVertex,[],[],[]) ->
 	case Closed of 
 		1 -> io:format("<!-- ctx.fill(); -->~n");
@@ -269,15 +308,15 @@ doLWPoly(Closed,FirstVertex,G42list,G10list,G20list) ->
 				doLWPoly(Closed,0,G42tail,G10tail,G20tail)
 	end.
 
-%****************************************************************************
+%****************************************************************************************
 % Draw a spline segment
-%****************************************************************************
+%****************************************************************************************
 drawSplineSegment([{10,X1}|_],[{20,Y1}|_]) -> 
 	io:format("~.12f,~.12f,1 ",[X1,Y1]).
 
-%****************************************************************************
+%****************************************************************************************
 % Fill or stroke the spline
-%****************************************************************************
+%****************************************************************************************
 doSpline(Closed,_FirstPoint,[],[]) ->
 	case Closed of 
 		1 -> io:format("<!-- Spline closed -->~n");
@@ -295,9 +334,9 @@ doSpline(Closed,FirstPoint,G10list,G20list) ->
 				doSpline(Closed,0,G10tail,G20tail)
 	end.
 
-%****************************************************************************
+%****************************************************************************************
 % Set current drawing color if it is new
-%****************************************************************************
+%****************************************************************************************
 setColor(Pen) ->
 	case get(color) /= Pen of
    		true -> put(color,Pen),
@@ -305,9 +344,9 @@ setColor(Pen) ->
 		_ -> ok
 end.
 	
-%****************************************************************************
+%****************************************************************************************
 % Print an entity
-%****************************************************************************
+%****************************************************************************************
 print_entity({_,"TRACE",Entity},_) -> print_entity({0,"SOLID",Entity},0);
 
 print_entity({_,"SOLID",Entity},_) ->
@@ -471,31 +510,18 @@ lookup_safe(Entity,G) ->
 		_ -> 0
 	end.
 
-%****************************************************************************
+%****************************************************************************************
 % Find the header section in the dxf file
-%****************************************************************************
+%****************************************************************************************
 find_header(B) -> find_header1({B,"",0}).
 
 find_header1({B,"HEADER",2}) -> B;
 find_header1({B,_,_}) -> find_header1(parse_dxf(B)).
 
-%****************************************************************************
-% Print the header section in the vec file
-%****************************************************************************
-print_header() ->
-	io:format("<?xml version=\"1.0\" encoding=\"UTF-8\"?>~n",[]),
-	io:format("<!-- Created with dxf2vec -->~n~n",[]),
-	io:format("<vec ~nversion=\"1.7\">~n",[]),
-	io:format("<playback ~nframerange=\"0 47\" ~nfps=\"24\" ~nsubframeinbetweening=\"off\" ~nplaymode=\"normal\"/>~n",[]),
-	io:format("<canvas ~nposition=\"0 0\" ~nsize=\"400 200\"/>~n",[]),
-	io:format("<layer ~nname=\"Layer 1\" ~nvisible=\"true\">~n",[]),
-	io:format("<background ~ncolor=\"rgba(255,255,255,1)\" ~nimage=\"\" ~nposition=\"0 0\"~n",[]), 
-	io:format("size=\"cover\" ~nrepeat=\"norepeat\" ~nopacity=\"1\" ~nhold=\"yes\"/>~n",[]),
-	io:format("<objects>~n",[]).
 	
-%****************************************************************************
+%****************************************************************************************
 % Write the size of the drawing
-%****************************************************************************
+%****************************************************************************************
 limits(B) -> limits1({B,"",0}).
 
 limits1({B,"$EXTMIN",9}) -> 
@@ -509,9 +535,9 @@ limits1({B,"$EXTMAX",9}) ->
 	io:format("~B,~B] -->~n",[round(X2),round(Y2)]);
 limits1({B,_,_}) -> limits1(parse_dxf(B)).
 
-%****************************************************************************
+%****************************************************************************************
 % Insert a new entity table Gtable in the Etable. Thickness is the key, Etype is the entity type
-%****************************************************************************
+%****************************************************************************************
 doInsert(Gtable,Etable,Etype,Layer)  -> 
 	[{8,Layer1}|_] = reverse(lookup(Gtable, 8)), % Check it's on the right layer
 	case Layer == Layer1 of
@@ -528,9 +554,9 @@ doInsert(Gtable,Etable,Etype,Layer)  ->
 		_ -> ignore
 	end.
 
-%****************************************************************************
+%****************************************************************************************
 % Erase the previous entity from the Gtable and set some default values
-%****************************************************************************
+%****************************************************************************************
 reset_all(Gtable) ->
 	ets:delete_all_objects(Gtable),
 	insert(Gtable, {6,"CONTINUOUS"}),
@@ -544,16 +570,16 @@ reset_all(Gtable) ->
 	insert(Gtable, {71,0}),
 	insert(Gtable, {72,0}).
 	
-%****************************************************************************
+%****************************************************************************************
 % Find the entities section in the dxf file
-%****************************************************************************
+%****************************************************************************************
 find_entities(B) -> find_entities1({B,"",0}).
 find_entities1({B,"ENTITIES",2}) -> B;
 find_entities1({B,_,_}) -> find_entities1(parse_dxf(B)).
 
-%****************************************************************************
+%****************************************************************************************
 % Step thru each entity in the entities section
-%****************************************************************************
+%****************************************************************************************
 entities(_,<<>>,_Layer) -> true;
 entities(Etable,<<0:?WORD,Rest/binary>>,Layer) -> 
 	Gtable = ets:new(group,[duplicate_bag,private]),
@@ -565,9 +591,9 @@ entities(Etable,B,Layer) ->
 	{B1,_T1,_G1} = parse_dxf(B), 
 	entities(Etable,B1,Layer).
 
-%****************************************************************************
+%****************************************************************************************
 % Step thru each Group in an entity
-%****************************************************************************
+%****************************************************************************************
 entity(_,_,_,_,<<>>) -> <<>>;
 entity(Gtable,Etable,Layer,E,<<0:?WORD,Rest/binary>>) -> 
 	params(Gtable,Etable,Layer,E,'end',0), 
@@ -577,9 +603,9 @@ entity(Gtable,Etable,Layer,E,B) ->
 	params(Gtable,Etable,Layer,E,V1,G1), 
 	entity(Gtable,Etable,Layer,E,B1).
 
-%****************************************************************************
+%****************************************************************************************
 % Insert each entity into an ets table Gtable
-%****************************************************************************
+%****************************************************************************************
 params(Gtable,Etable,Layer,Etype, 'end', 0) -> doInsert(Gtable,Etable,Etype,Layer);
 %params(Gtable,_,_,_, V, 42) -> 
 %	insertBulge(Gtable, length(lookup(Gtable,10)),length(lookup(Gtable,42)), {42,V});
@@ -590,9 +616,9 @@ insertBulge(Gtable,G10,G42,G) when G10 == G42+1 -> insert(Gtable, G);
 insertBulge(Gtable,G10,G42,G) -> insert(Gtable, {42,0}),insertBulge(Gtable,G10,G42+1,G).
 
 
-%****************************************************************************
+%****************************************************************************************
 % Parse the binary dxf file and create erlang data types
-%****************************************************************************
+%****************************************************************************************
 ac_text(Thefile) -> T = parse_text(Thefile, []), {_,B1} = split_binary(Thefile, length(T)+1), {B1,T}.
 
 parse_text(<<0:?BYTE,_R/binary>>,Text) -> reverse(Text) ; %% Terminating zero string composer	
