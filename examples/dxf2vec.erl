@@ -62,7 +62,8 @@ start(Args) ->
 			ascii ->
 				{ok, F} = file:open(DXF, read),
 				find_header_ascii(F),
-				%{{X1,[]},{Y1,[]},{X2,[]},{Y2,[]}} = limits_ascii(F),
+				{{X1,[]},{Y1,[]},{X2,[]},{Y2,[]}} = limits_ascii(F),
+				put(ll,{X1,Y1}), put(ur,{X2,Y2}),
 				find_entities_ascii(F),
 				io:get_line(F, ''), % get rid of "  0"
 				entities_ascii(F,Etable,string:to_upper(Layer),trim(io:get_line(F, '')));
@@ -70,7 +71,7 @@ start(Args) ->
 				{ok, B} = file:read_file(DXF),
 				{_,B1} = split_binary(B, 22),
 				B2 = find_header(B1),
-				%limits(B2),
+				limits(B2),
 				B3 = find_entities(B2),
 				entities(Etable,B3,string:to_upper(Layer))
 		end, 
@@ -86,8 +87,7 @@ print_header() ->
 	io:format("<?xml version=\"1.0\" encoding=\"UTF-8\"?>~n",[]),
 	io:format("<!-- Created with dxf2vec -->~n~n",[]),
 	io:format("<vec~nversion=\"1.7\">~n",[]),
-	io:format("<playback~nframerange=\"0 47\"~nfps=\"24\"~nsubframeinbetweening=\"off\"~nplaymode=\"normal\"/>~n",[]),
-	io:format("<canvas~nposition=\"0 0\"~nsize=\"400 200\"/>~n",[]).
+	io:format("<playback~nframerange=\"0 47\"~nfps=\"24\"~nsubframeinbetweening=\"off\"~nplaymode=\"normal\"/>~n",[]).
 
 %****************************************************************************************
 % Print the layerheader section in the vec file
@@ -106,7 +106,9 @@ print_layer_trailer() -> io:format("</objects>~n</layer>~n").
 %****************************************************************************************
 % Print the trailer section in the vec file
 %****************************************************************************************
-print_trailer() -> io:format("</vec>~n").
+print_trailer() -> 	{_X1,_Y1} = get(ll), {X2,Y2} = get(ur),
+	io:format("<canvas~nposition=\"~p ~p\"~nsize=\"~p ~p\"/>~n",[0,0,X2+(X2/2),Y2+(Y2/2)]),
+	io:format("</vec>~n").
 
 %****************************************************************************************
 % Function find_entities_ascii(F1), 
@@ -595,11 +597,13 @@ limits(B) -> limits1({B,"",0}).
 limits1({B,"$EXTMIN",9}) -> 
 	{B1,X1,_G1} = parse_dxf(B), 
 	{B2,Y1,_G2} = parse_dxf(B1),
+	put(ll,{round(X1),round(Y1)}),
     io:format("<!-- bbox = [~B,~B,",[round(X1),round(Y1)]),
 	limits1({B2,"",0});
 limits1({B,"$EXTMAX",9}) -> 
 	{B1,X2,_G1} = parse_dxf(B), 
 	{_B2,Y2,_G2} = parse_dxf(B1),
+	put(ur,{round(X2),round(Y2)}),
 	io:format("~B,~B] -->~n",[round(X2),round(Y2)]);
 limits1({B,_,_}) -> limits1(parse_dxf(B)).
 
