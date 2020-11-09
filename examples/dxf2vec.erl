@@ -265,12 +265,12 @@ fixang(Ang) -> Ang.
 polar(Radius,Ang) -> A1 = dtor(Ang), X = Radius * math:cos(A1), Y = Radius * math:sin(A1), {X,Y}. 
 
 % Returns two lists of 10 and 20 Groups, angles in degres
-listpolar(x,Radius,Startangle,Endangle) ->
+listpolar(x,X1,_Y1,Radius,Startangle,Endangle) ->
 	Anglelist = angles(round(Startangle),round(Endangle),[]),
-	lists:map(fun(A) -> {X,_Y} = polar(Radius,A), {10,X} end, Anglelist);
-listpolar(y,Radius,Startangle,Endangle) ->
+	lists:map(fun(A) -> {X,_Y} = polar(Radius,A), {10,X+X1} end, Anglelist);
+listpolar(y,_X1,Y1,Radius,Startangle,Endangle) ->
 	Anglelist = angles(round(Startangle),round(Endangle),[]),
-	lists:map(fun(A) -> {_X,Y} = polar(Radius,A), {20,Y} end, Anglelist).
+	lists:map(fun(A) -> {_X,Y} = polar(Radius,A), {20,Y+Y1} end, Anglelist).
 
 % angles(From,To,R) returns a list of valid angles between 0 and 360
 angles(X,X,Result) -> Result;
@@ -463,8 +463,8 @@ print_entity({_,"ARC",Entity},_) ->
 	{Xe,Ye} = polar(Radius, Endangle),
 	Xs1 = X1 + Xs, Ys1 = Y1 + Ys,
 	Xe1 = X1 + Xe, Ye1 = Y1 + Ye,
-	G10list = listpolar(x,Radius,Startangle,Endangle),
-	G20list = listpolar(y,Radius,Startangle,Endangle),
+	G10list = listpolar(x,X1,Y1,Radius,Startangle,Endangle),
+	G20list = listpolar(y,X1,Y1,Radius,Startangle,Endangle),
 	doSpline(0,1,G10list,G20list,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
 
 print_entity({_,"ELLIPSE",Entity},_) -> 
@@ -479,7 +479,7 @@ print_entity({_,"ELLIPSE",Entity},_) ->
 	_Rot = ang(RadiusX,RadiusY,0,0),
 	_R = radius(RadiusX,RadiusY,0,0),
 	_Color = setColor(Pen,1),
-	io:format("<!-- ToDo: ELLIPSE -->~n",[]);
+	io:format("<!-- Use command OFFSET on the ellipse to convert it to a spline -->~n",[]);
 
 print_entity({_,"CIRCLE",Entity},_) ->
 	[{_,X1}|_] = lookup(Entity, 10),
@@ -491,9 +491,9 @@ print_entity({_,"CIRCLE",Entity},_) ->
 	{Xe,Ye} = polar(Radius, 360),
 	Xs1 = X1 + Xs, Ys1 = Y1 + Ys,
 	Xe1 = X1 + Xe, Ye1 = Y1 + Ye,
-	G10list = listpolar(x,Radius,0,360),
-	G20list = listpolar(y,Radius,0,360),
-	doSpline(0,1,G10list,G20list,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
+	G10list = listpolar(x,X1,Y1,Radius,0,360),
+	G20list = listpolar(y,X1,Y1,Radius,0,360),
+	doSpline(1,1,G10list,G20list,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
 
 print_entity({_,"POLYLINE",Entity},Ttable) -> 
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)), 
