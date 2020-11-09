@@ -8,7 +8,7 @@
 %% Download and install latest Erlang from www.erlang.org or use apt-get or similar package manager.
 
 %% Draw key frames in AutoCAD or any CAD that can save as DXF R14, ASCII or Binary.
-%% Use TRACE, SOLID, SPLINE (closed), POINT, LINE in AutoCAD.
+%% Use TRACE, SOLID, SPLINE, POINT, LINE in AutoCAD.
 %% Other drawing primitives will be implemented later.
 %% An ellipse can be made a spline by offsetting it, erase the ellipse and offset back.
 
