@@ -5,22 +5,25 @@
 %% long as this license and the copyright notice above are preserved and
 %% not modified. There is no warranty for this software.
 
-%% Download latest Erlang from www.erlang.org or use apt-get or similar package manager.
-%% Use AutoCAD or any CAD that can save as DXF R14, ASCII or Binary.
+%% Download and install latest Erlang from www.erlang.org or use apt-get or similar package manager.
 
-%% Compile dxf2vec.erl: erlc dxf2vec.erl
+%% Draw key frames in AutoCAD or any CAD that can save as DXF R14, ASCII or Binary.
+%% Use TRACE, SOLID, SPLINE (closed), POINT, LINE in AutoCAD.
+%% Other drawing primitives will be implemented later.
+%% An ellipse can be made a spline by offsetting it, erase the ellipse and offset back.
+
+%% Compile dxf2vec.erl, type: erlc dxf2vec.erl
 
 %% Start the erlang console with erl
-%% To konvert layer 0 type
+
+%% To konvert proctor_heel_plug.dxf layer 0 type:
 %% dxf2vec:start(["proctor_heel_plug.dxf","0"]).
+
 %% To convert layer 0 and 1 type:
 %% dxf2vec:start(["proctor_heel_plug.dxf","0,1"]).
 
 %% Copy-Paste the output from the console to a file "anyname.vec"
 
-%% Use TRACE, SOLID, SPLINE (closed), POINT, LINE in AutoCAD.
-%% Other drawing primitives will be implemented later.
-%% An ellipse can be made a spline by offsetting it, erase the ellipse and offset back.
 
 -module(dxf2vec).
 -author(skvamme).
@@ -35,10 +38,11 @@
 
 %% 080612	First version												S Kvamme
 %% 081213	Bug in setting of Color fixed								S Kvamme
-%% 081213	Bug in sorting fixed. Changed to sort Thicknes (was Elevation).	S Kvamme
+%% 081213	Bug in sorting fixed. Changed to sort Thicknesses			S Kvamme
 %% 090909	Added support for ASCII DXF									S Kvamme
 %% 100117	Bug in entity color fixed (QCAD)							S Kvamme
 %% 100619	Changed output format from erlang to Javascript				S Kvamme
+%% 120125   Layers are specified on command line as name1,name2,name3   S Kvamme
 %% 201026	Changed output format from Javascript to VPaint vec			S Kvamme
 
 %****************************************************************************************
@@ -47,20 +51,18 @@
 start(Args) ->
 	DXF = hd(Args),
 	Layerarray = string:tokens(lists:flatten(tl(Args)),",+"),
-	put(edge,0), % holds edge numbering
-	put(vertex,0), % holds vertex numbering, vill be an ets with x and y
+	put(id,0), % holds object numbering
 	print_header(),
 	lists:foreach( fun(Layer) -> 
 		Etable = ets:new(entity,[duplicate_bag,private]), % Store all the entities in this table
-		Ttable = ets:new(tmp,[set,private]), % Store temporary group values here
+		Ttable = ets:new(tmp,[set,private]), % Store temporary group values
 		print_layer_header(Layer),
 		case read_dxf_tag(DXF) of
-			error -> io:format("//Cannot read file: ~p~n",[DXF]);
+			error -> io:format("//Cannot read file: ~p~n",[DXF]),erlang:halt();
 			ascii ->
 				{ok, F} = file:open(DXF, read),
 				find_header_ascii(F),
-				{{_X1,[]},{_Y1,[]},{_X2,[]},{_Y2,[]}} = limits_ascii(F),
-				%io:format("Limits: ~p~n",[{X1,Y1,X2,Y2}]),
+				%{{X1,[]},{Y1,[]},{X2,[]},{Y2,[]}} = limits_ascii(F),
 				find_entities_ascii(F),
 				io:get_line(F, ''), % get rid of "  0"
 				entities_ascii(F,Etable,string:to_upper(Layer),trim(io:get_line(F, '')));
@@ -72,7 +74,7 @@ start(Args) ->
 				B3 = find_entities(B2),
 				entities(Etable,B3,string:to_upper(Layer))
 		end, 
-			prints_entities(Etable,Ttable),
+			print_entities(Etable,Ttable),
 			print_layer_trailer()
 		end,Layerarray),
 		print_trailer().
@@ -83,17 +85,17 @@ start(Args) ->
 print_header() ->
 	io:format("<?xml version=\"1.0\" encoding=\"UTF-8\"?>~n",[]),
 	io:format("<!-- Created with dxf2vec -->~n~n",[]),
-	io:format("<vec ~nversion=\"1.7\">~n",[]),
-	io:format("<playback ~nframerange=\"0 47\" ~nfps=\"24\" ~nsubframeinbetweening=\"off\" ~nplaymode=\"normal\"/>~n",[]),
-	io:format("<canvas ~nposition=\"0 0\" ~nsize=\"400 200\"/>~n",[]).
+	io:format("<vec~nversion=\"1.7\">~n",[]),
+	io:format("<playback~nframerange=\"0 47\"~nfps=\"24\"~nsubframeinbetweening=\"off\"~nplaymode=\"normal\"/>~n",[]),
+	io:format("<canvas~nposition=\"0 0\"~nsize=\"400 200\"/>~n",[]).
 
 %****************************************************************************************
 % Print the layerheader section in the vec file
 %****************************************************************************************
 print_layer_header(Layer) ->
-	io:format("~n<layer ~nname=~p ~nvisible=\"true\">~n",[Layer]),
-	io:format("<background ~ncolor=\"rgba(255,255,255,1)\" ~nimage=\"\" ~nposition=\"0 0\"~n",[]), 
-	io:format("size=\"cover\" ~nrepeat=\"norepeat\" ~nopacity=\"1\" ~nhold=\"yes\"/>~n",[]),
+	io:format("<layer~nname=~p~nvisible=\"true\">~n",[Layer]),
+	io:format("<background~ncolor=\"rgba(255,255,255,1)\"~nimage=\"\"~nposition=\"0 0\"~n",[]), 
+	io:format("size=\"cover\"~nrepeat=\"norepeat\"~nopacity=\"1\"~nhold=\"yes\"/>~n",[]),
 	io:format("<objects>~n",[]).
 
 %****************************************************************************************
@@ -209,15 +211,15 @@ read_dxf_tag(File) ->
 %****************************************************************************************
 % Print all the entities, lowest thickness first
 %****************************************************************************************
-prints_entities(Etable,Ttable) ->
+print_entities(Etable,Ttable) ->
 	Elevlist = elevations(Etable),
-	prints_entities1(Elevlist,Etable,Ttable).
+	print_entities1(Elevlist,Etable,Ttable).
 	
-prints_entities1([],_Etable,_Ttable) -> true;
-prints_entities1([E|Tail],Etable,Ttable) ->
+print_entities1([],_Etable,_Ttable) -> true;
+print_entities1([E|Tail],Etable,Ttable) ->
 	Entitytuplelist = ets:lookup(Etable,E),% io:format("Entities ~p~n",[Entitytuplelist]),
 	lists:foreach(fun (Entity) -> print_entity(Entity,Ttable) end, Entitytuplelist),
-	prints_entities1(Tail,Etable,Ttable).
+	print_entities1(Tail,Etable,Ttable).
 
 %****************************************************************************************
 % Create a sorted list with all unique Thicknesses
@@ -290,7 +292,7 @@ drawSegment(_,_,_,X2,Y2) ->
 	io:format("<!-- ctx.lineTo(~.12f,~.12f);  -->~n",[X2,Y2]).
 
 %****************************************************************************************
-% Fill or stroke the lwpolyline
+% Draw the lwpolyline
 %****************************************************************************************
 doLWPoly(Closed,_FirstVertex,[],[],[],Color,_Width) ->
 	case Closed of 
@@ -302,9 +304,9 @@ doLWPoly(Closed,FirstVertex,G42list,G10list,G20list,Color,Width) ->
 	[{10,_X1}|G10tail] = G10list,
 	[{20,_Y1}|G20tail] = G20list,
 	case FirstVertex of
-		1 -> 	I = get(edge),
-				io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ",[I]),
-				put(edge,I+1),
+		1 -> 	I = get(id),
+				io:format("<edge~nid=\"~p\"~ncurve=\"xywdense(5 ",[I]),
+				put(id,I+1),
 				doLWPoly(Closed,0,G42list,G10list,G20list,Color,Width);
 		_ ->  drawLWSegment(G10list,G20list,G42list,Width),
 				doLWPoly(Closed,0,G42tail,G10tail,G20tail,Color,Width)
@@ -317,23 +319,31 @@ drawSplineSegment([{10,X1}|_],[{20,Y1}|_]) ->
 	io:format("~.12f,~.12f,1 ",[X1,Y1]).
 
 %****************************************************************************************
-% Fill or stroke the spline
+% Draw the spline
 %****************************************************************************************
-doSpline(Closed,_FirstPoint,[],[],Color) ->
+doSpline(Closed,_FirstPoint,[],[],Color,{10,Xstart},{20,Ystart},{10,Xend},{20,Yend}) ->
 	case Closed of 
-		1 -> io:format("<!-- Spline closed -->~n");
-		_ -> io:format(")\"  ~ncolor=~p/>~n",[Color])
+		0 -> io:format(")\"~ncolor=~p~n",[Color]),
+			 I = get(id),
+			 io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I,I+1]),
+			 io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
+			 	[I,Xstart,Ystart,Color]),
+			 io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
+			 	[I+1,Xend,Yend,Color]),
+			 put(id,I+2);
+		1 -> io:format(")\"~ncolor=~p/>~n",[Color])
 	end;
-doSpline(Closed,FirstPoint,G10list,G20list,Color) ->
+
+doSpline(Closed,FirstPoint,G10list,G20list,Color,Xstart,Ystart,Xend,Yend) ->
 	[{10,_X1}|G10tail] = G10list,
 	[{20,_Y1}|G20tail] = G20list,
 	case FirstPoint of
-		1 -> 	I = get(edge),
-					io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ",[I]),
-					put(edge,I+1),
-					doSpline(Closed,0,G10list,G20list,Color);
+		1 -> 	I = get(id),
+					io:format("<edge~nid=\"~p\"~ncurve=\"xywdense(5 ",[I]),
+					put(id,I+1),
+					doSpline(Closed,0,G10list,G20list,Color,Xstart,Ystart,Xend,Yend);
 		_ ->  drawSplineSegment(G10list,G20list),
-				doSpline(Closed,0,G10tail,G20tail,Color)
+				doSpline(Closed,0,G10tail,G20tail,Color,Xstart,Ystart,Xend,Yend)
 	end.
 
 %****************************************************************************************
@@ -370,7 +380,7 @@ print_entity({_,"SOLID",Entity},_) ->
 	[{_,X4}|_] = lookup(Entity, 11),[{_,Y4}|_] = lookup(Entity, 21),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	Color = setColor(Pen,1),
-	I = get(edge),
+	I = get(id),
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
 		[I,X1,Y1,X2,Y2,Color]),
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
@@ -379,7 +389,7 @@ print_entity({_,"SOLID",Entity},_) ->
 		[I+2,X3,Y3,X4,Y4,Color]),
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
 		[I+4,X4,Y4,X1,Y1,Color]),
-	put(edge,I+4);
+	put(id,I+4);
 	
 print_entity({_,"LINE",Entity},_) ->
 	[{_,X1}|_] = lookup(Entity, 10),
@@ -388,26 +398,34 @@ print_entity({_,"LINE",Entity},_) ->
 	[{_,Y2}|_] = lookup(Entity, 21),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	Color = setColor(Pen,1),
-	I = get(edge),
+	I = get(id),
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
 		[I,X1,Y1,X2,Y2,Color]),
-	put(edge,I+1);
+	put(id,I+1);
 
 print_entity({_,"POINT",Entity},_) ->
 	[{_,X1}|_] = lookup(Entity, 10),
 	[{_,Y1}|_] = lookup(Entity, 20),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
-	I = get(vertex),
+	I = get(id),
 	Color = setColor(Pen,1),
-	io:format("<vertex ~nid=\"~p\" ~nposition=\"~.12f ~.12f\" ~ncolor=~p />~n",[I,X1,Y1,Color]),
-	put(vertex,I+1);
+	io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",[I,X1,Y1,Color]),
+	put(id,I+1);
 
 print_entity({_,"SPLINE",Entity},_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
  	G10list = lookup(Entity, 10),
  	G20list = lookup(Entity, 20),
 	Color = setColor(Pen,1),
-	doSpline(0,1,G10list,G20list,Color);
+	Xstart = hd(G10list),
+	Ystart = hd(G20list),
+	Xend = hd(reverse(G10list)),
+	Yend = hd(reverse(G20list)),
+	Closed = case Xstart of
+		X when X == Xend andalso Ystart == Yend -> 1;
+		_ -> 0
+	end,
+	doSpline(Closed,1,G10list,G20list,Color,Xstart,Ystart,Xend,Yend);
 	
 print_entity({_,"ARC",Entity},_) ->
 	[{_,_X1}|_] = lookup(Entity, 10),
@@ -455,16 +473,13 @@ print_entity({_,"VERTEX",Entity},Ttable) ->
 	[{_,FV}|_] = lookup(Ttable, firstvertex),
 	Bulge = lookup_safe(Entity, 42),
 	case FV of	
-		1 ->  	
-			io:format("<!-- ToDo: First VERTEX -->~n",[]),
-			insert(Ttable,{firstvertex,0}),
-			insert(Ttable,{startx,X1}),
-			insert(Ttable,{starty,Y1});
-		_ -> 	
-			[{_,X2}|_] = lookup(Ttable, 10), 
-			[{_,Y2}|_] = lookup(Ttable, 20),
-			Bulge1 = lookup_safe(Ttable,42), % Bulge group on previous vertex
-			drawSegment(Bulge1,X2,Y2,X1,Y1)
+		1 -> insert(Ttable,{firstvertex,0}),
+			 insert(Ttable,{startx,X1}),
+			 insert(Ttable,{starty,Y1});
+		_ -> [{_,X2}|_] = lookup(Ttable, 10), 
+			 [{_,Y2}|_] = lookup(Ttable, 20),
+			 Bulge1 = lookup_safe(Ttable,42), % Bulge group on previous vertex
+			 drawSegment(Bulge1,X2,Y2,X1,Y1)
 	end,
 	insert(Ttable,{10,X1}),    % Save point
 	insert(Ttable,{20,Y1}),
@@ -480,8 +495,7 @@ print_entity({_,"SEQEND",_Entity},Ttable) ->
 				[{_,X2}|_] = lookup(Ttable, 10), 
 				[{_,Y2}|_] = lookup(Ttable, 20),
 				Bulge1 = lookup_safe(Ttable,42),
-				drawSegment(Bulge1,X2,Y2,X1,Y1),
-				io:format("<!-- ToDo: SEQEND -->~n",[])
+				drawSegment(Bulge1,X2,Y2,X1,Y1)
 	end,
 	ets:delete_all_objects(Ttable);
 
