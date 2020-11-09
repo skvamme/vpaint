@@ -261,6 +261,30 @@ ang(X1,Y1,Xcen,Ycen) -> atan2((Y1 - Ycen),(X1 - Xcen)).
 fixang(Ang) when Ang < 0.0 -> Ang + (2 * pi());
 fixang(Ang) -> Ang.
 
+% Polat to rectangular, angle in degres
+polar(Radius,Ang) -> A1 = dtor(Ang), X = Radius * math:cos(A1), Y = Radius * math:sin(A1), {X,Y}. 
+
+% Returns two lists of 10 and 20 Groups, angles in degres
+listpolar(x,Radius,Startangle,Endangle) ->
+	Anglelist = angles(round(Startangle),round(Endangle),[]),
+	lists:map(fun(A) -> {X,_Y} = polar(Radius,A), {10,X} end, Anglelist);
+listpolar(y,Radius,Startangle,Endangle) ->
+	Anglelist = angles(round(Startangle),round(Endangle),[]),
+	lists:map(fun(A) -> {_X,Y} = polar(Radius,A), {20,Y} end, Anglelist).
+
+% angles(From,To,R) returns a list of valid angles between 0 and 360
+angles(X,X,Result) -> Result;
+angles(From,To,_) when From < To ->
+	lists:seq(From, To);
+angles(From,To,Result) ->
+	case From of
+		X when X < 360 -> angles(From +1,To,[From|Result]);
+		X when X == 360 -> angles(0,To,[From|Result])
+	end.
+
+
+
+
 %****************************************************************************************
 % Draw an lwpolyline segment
 %****************************************************************************************
@@ -428,14 +452,20 @@ print_entity({_,"SPLINE",Entity},_) ->
 	doSpline(Closed,1,G10list,G20list,Color,Xstart,Ystart,Xend,Yend);
 	
 print_entity({_,"ARC",Entity},_) ->
-	[{_,_X1}|_] = lookup(Entity, 10),
-	[{_,_Y1}|_] = lookup(Entity, 20),
-	[{_,_Radius}|_] = lookup(Entity, 40),
-	[{_,_Startangle}|_] = lookup(Entity, 50),
-	[{_,_Endangle}|_] = lookup(Entity, 51),
+	[{_,X1}|_] = lookup(Entity, 10),
+	[{_,Y1}|_] = lookup(Entity, 20),
+	[{_,Radius}|_] = lookup(Entity, 40),
+	[{_,Startangle}|_] = lookup(Entity, 50),
+	[{_,Endangle}|_] = lookup(Entity, 51),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
-	_Color = setColor(Pen,1),
-	io:format("<!-- ToDo: ARC -->~n",[]);
+	Color = setColor(Pen,1),
+	{Xs,Ys} = polar(Radius, Startangle),
+	{Xe,Ye} = polar(Radius, Endangle),
+	Xs1 = X1 + Xs, Ys1 = Y1 + Ys,
+	Xe1 = X1 + Xe, Ye1 = Y1 + Ye,
+	G10list = listpolar(x,Radius,Startangle,Endangle),
+	G20list = listpolar(y,Radius,Startangle,Endangle),
+	doSpline(0,1,G10list,G20list,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
 
 print_entity({_,"ELLIPSE",Entity},_) -> 
 	[{_,_X1}|_] = lookup(Entity, 10),
@@ -452,12 +482,18 @@ print_entity({_,"ELLIPSE",Entity},_) ->
 	io:format("<!-- ToDo: ELLIPSE -->~n",[]);
 
 print_entity({_,"CIRCLE",Entity},_) ->
-	[{_,_X1}|_] = lookup(Entity, 10),
-  	[{_,_Y1}|_] = lookup(Entity, 20),
-	[{_,_Radius}|_] = lookup(Entity, 40),
+	[{_,X1}|_] = lookup(Entity, 10),
+  	[{_,Y1}|_] = lookup(Entity, 20),
+	[{_,Radius}|_] = lookup(Entity, 40),
   	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
-	_Color = setColor(Pen,1),
-	io:format("<!-- ToDo: CIRCLE -->~n",[]);
+	Color = setColor(Pen,1),
+	{Xs,Ys} = polar(Radius, 0),
+	{Xe,Ye} = polar(Radius, 360),
+	Xs1 = X1 + Xs, Ys1 = Y1 + Ys,
+	Xe1 = X1 + Xe, Ye1 = Y1 + Ye,
+	G10list = listpolar(x,Radius,0,360),
+	G20list = listpolar(y,Radius,0,360),
+	doSpline(0,1,G10list,G20list,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
 
 print_entity({_,"POLYLINE",Entity},Ttable) -> 
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)), 
