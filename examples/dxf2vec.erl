@@ -4,25 +4,31 @@
 %% and modification of this software to everyone and for any purpose, as
 %% long as this license and the copyright notice above are preserved and
 %% not modified. There is no warranty for this software.
-
-%% Download and install latest Erlang from www.erlang.org or use apt-get or similar package manager.
-
+%%
+%%
 %% Draw key frames in AutoCAD or any CAD that can save as DXF R14, ASCII or Binary.
-%% Use TRACE, SOLID, SPLINE, POINT, LINE, CIRCLE and ARC in AutoCAD.
-%% Other drawing primitives will be implemented later.
-%% An ellipse can be made a spline by offsetting it, erase the ellipse and offset back.
-
+%% Use TRACE, SOLID, POINT, LINE, CIRCLE and ARC. 
+%% PLINE segments works but safest is to explode PLINES prior to dxfout. 
+%% SPLINE can be used, but you have to dxfout to R12 and then dxfin. The spline is now automagically
+%% converted to a pline.
+%% An ELLIPSE can be made a spline by offsetting it, then erase the ellipse and offset back.
+%% To avoid mirrored output, MIRROR drawing over the x-axis (Y=0). Move it back up and do dxfout. Undo move and mirror.
+%%
+%% ****** Installation ********
+%% Download and install latest Erlang from www.erlang.org or use apt-get or similar package manager.
 %% Compile dxf2vec.erl, type: erlc dxf2vec.erl
-
+%%
+%% ******* Use ********
 %% Start the erlang console with erl
-
+%%
 %% To konvert proctor_heel_plug.dxf layer 0 type:
 %% dxf2vec:start(["proctor_heel_plug.dxf","0"]).
-
+%%
 %% To convert layer 0 and 1 type:
 %% dxf2vec:start(["proctor_heel_plug.dxf","0,1"]).
-
+%%
 %% Copy-Paste the output from the console to a file "anyname.vec"
+%%
 
 
 -module(dxf2vec).
@@ -263,47 +269,87 @@ ang(X1,Y1,Xcen,Ycen) -> atan2((Y1 - Ycen),(X1 - Xcen)).
 fixang(Ang) when Ang < 0.0 -> Ang + (2 * pi());
 fixang(Ang) -> Ang.
 
-% Polat to rectangular, angle in degres
+% Polar to rectangular, angle in degres
 polar(Radius,Ang) -> A1 = dtor(Ang), X = Radius * math:cos(A1), Y = Radius * math:sin(A1), {X,Y}. 
 
-% Returns two lists of 10 and 20 Groups, angles in degres
-listpolar(x,X1,_Y1,Radius,Startangle,Endangle) ->
-	Anglelist = angles(round(Startangle),round(Endangle),[]),
-	lists:map(fun(A) -> {X,_Y} = polar(Radius,A), {10,X+X1} end, Anglelist);
-listpolar(y,_X1,Y1,Radius,Startangle,Endangle) ->
-	Anglelist = angles(round(Startangle),round(Endangle),[]),
-	lists:map(fun(A) -> {_X,Y} = polar(Radius,A), {20,Y+Y1} end, Anglelist).
+% Returns lists of 10 and 20 Groups, angles in degres
+listpolar(X1,Y1,Radius,Startangle,Endangle,Bulge) -> %io:format("******************Bulge: ~p Startang: ~p Endang: ~p~n",
+%		[Bulge,Startangle,Endangle]),
+	Anglelist = case Bulge of
+		B when B > 0 -> angles_n(round(Startangle),round(Endangle),[]);
+		B when B < 0 -> angles(round(Startangle),round(Endangle),[])
+end,
+	lists:map(fun(A) -> {X,Y} = polar(Radius,A), {{10,X+X1},{20,Y+Y1}} end, Anglelist).
 
-% angles(From,To,R) returns a list of valid angles between 0 and 360
-angles(X,X,Result) -> Result;
-angles(From,To,_) when From < To ->
-	lists:seq(From, To);
+% angles(From,To,R) returns a list of valid angles between 0 and 360 clockwise
+angles(X,X,Result) -> lists:reverse(Result); % arc in PostScript, Bulge is negative
 angles(From,To,Result) ->
 	case From of
 		X when X < 360 -> angles(From +1,To,[From|Result]);
-		X when X == 360 -> angles(0,To,[From|Result])
+		_ -> angles(0,To,[0|Result])
 	end.
 
-
-
+% angles(From,To,R) returns a list of valid angles between 0 and 360 anti-clockwise
+angles_n(X,X,Result) -> lists:reverse(Result); % arcn in PostScript
+angles_n(From,To,Result) ->
+	case From of
+		X when X > 0 -> angles_n(From -1,To,[From|Result]);
+		_ -> angles_n(360,To,[360|Result])
+	end.
 
 %****************************************************************************************
 % Draw an lwpolyline segment
 %****************************************************************************************
 drawLWSegment([{10,X1}|[{10,X2}|_]],[{20,Y1}|[{20,Y2}|_]],[{42,B1}|_],_) when 
-		(B1 > 0.000063) or (B1 < -0.000063) -> % Arc ahead
-	Cbce = cotbce(B1), 
-	Ycen = ycenter(X1,X2,Y1,Y2,Cbce),
+	(B1 > 0.000063) or (B1 < -0.000063) -> % Arc ahead
+	Cbce = cotbce(B1), %io:format("Bulge: ~p~n",[B1]),
 	Xcen = xcenter(X1,X2,Y1,Y2,Cbce),
-	Rad = radius(X1,Y1,Xcen,Ycen),
-	St_ang = fixang(ang(X1,Y1,Xcen,Ycen)), 
-	End_ang = fixang(ang(X2,Y2,Xcen,Ycen)),
-	io:format("<!-- ctx.arc(~.12f,~.12f,~.12f,~.12f,~.12f,~p); -->~n",[Xcen,Ycen,Rad,St_ang,End_ang,B1<0]); 
-drawLWSegment([{10,X1}|_],[{20,Y1}|_],_,Width) -> 
-	io:format("~.12f,~.12f,~.2f ",[X1,Y1,Width]).
+	Ycen = ycenter(X1,X2,Y1,Y2,Cbce),
+	Radius = radius(X1,Y1,Xcen,Ycen),
+	Startangle = rtod(fixang(ang(X1,Y1,Xcen,Ycen))), 
+	Endangle = rtod(fixang(ang(X2,Y2,Xcen,Ycen))),
+	Glist = listpolar(Xcen,Ycen,Radius,Startangle,Endangle,B1),
+	lists:foreach(fun({{10,X},{20,Y}}) -> io:format("~.12f,~.12f,~.2f ",[X,Y,1.00]) end, Glist);
+
+
+drawLWSegment([{10,X1}|_],[{20,Y1}|_],_B1,Width) -> %io:format("Bulge in lineseg: ~p~n",[B1]),
+	Width1 = case Width of
+		W when W == 0 -> 1.0;
+		W -> W
+	end,
+	io:format("~.12f,~.12f,~.2f ",[X1,Y1,Width1]).
 
 %****************************************************************************************
-% Draw a polyline segment
+% Draw the lwpolyline
+%****************************************************************************************
+doLWPoly(Closed,_FirstVertex,[],[],[],Color,_Width,{10,Xstart},{20,Ystart},{10,Xend},{20,Yend}) -> % fill or stroke?
+	case Closed of 
+		0 -> io:format(")\"~ncolor=~p~n",[Color]),
+			 I = get(id),
+			 io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I,I+1]),
+			 io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
+			 	[I,Xstart,Ystart,Color]),
+			 io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
+			 	[I+1,Xend,Yend,Color]),
+			 put(id,I+2);
+		1 -> io:format(")\"~ncolor=~p/>~n",[Color])
+	end;
+
+doLWPoly(Closed,FirstVertex,G42list,G10list,G20list,Color,Width,{10,Xstart},{20,Ystart},{10,Xend},{20,Yend}) ->
+	[_|G42tail] = G42list,
+	[{10,_X1}|G10tail] = G10list,
+	[{20,_Y1}|G20tail] = G20list,
+	case FirstVertex of
+		1 -> 	I = get(id),
+				io:format("<edge~nid=\"~p\"~ncurve=\"xywdense(5 ",[I]),
+				put(id,I+1),
+				doLWPoly(Closed,0,G42list,G10list,G20list,Color,Width,{10,Xstart},{20,Ystart},{10,Xend},{20,Yend});
+		_ ->  drawLWSegment(G10list,G20list,G42list,Width),
+				doLWPoly(Closed,0,G42tail,G10tail,G20tail,Color,Width,{10,Xstart},{20,Ystart},{10,Xend},{20,Yend})
+	end.
+
+%****************************************************************************************
+% Draw a 3d polyline segment
 %****************************************************************************************
 drawSegment(B2,X1,Y1,X2,Y2) when
 			(B2 > 0.000063) or (B2 < -0.000063) -> 
@@ -318,36 +364,15 @@ drawSegment(_,_,_,X2,Y2) ->
 	io:format("<!-- ctx.lineTo(~.12f,~.12f);  -->~n",[X2,Y2]).
 
 %****************************************************************************************
-% Draw the lwpolyline
-%****************************************************************************************
-doLWPoly(Closed,_FirstVertex,[],[],[],Color,_Width) ->
-	case Closed of 
-		1 -> io:format("<!-- ctx.fill(); -->~n");
-		_ -> io:format(")\"  ~ncolor=~p/> ~n",[Color])
-	end;
-doLWPoly(Closed,FirstVertex,G42list,G10list,G20list,Color,Width) ->
-	[_|G42tail] = G42list,
-	[{10,_X1}|G10tail] = G10list,
-	[{20,_Y1}|G20tail] = G20list,
-	case FirstVertex of
-		1 -> 	I = get(id),
-				io:format("<edge~nid=\"~p\"~ncurve=\"xywdense(5 ",[I]),
-				put(id,I+1),
-				doLWPoly(Closed,0,G42list,G10list,G20list,Color,Width);
-		_ ->  drawLWSegment(G10list,G20list,G42list,Width),
-				doLWPoly(Closed,0,G42tail,G10tail,G20tail,Color,Width)
-	end.
-
-%****************************************************************************************
 % Draw a spline segment
 %****************************************************************************************
-drawSplineSegment([{10,X1}|_],[{20,Y1}|_]) -> 
-	io:format("~.12f,~.12f,1 ",[X1,Y1]).
+drawSplineSegment([{{10,X1},{20,Y1}}|_]) -> 
+	io:format("~p,~p,1 ",[X1,Y1]).
 
 %****************************************************************************************
 % Draw the spline
 %****************************************************************************************
-doSpline(Closed,_FirstPoint,[],[],Color,{10,Xstart},{20,Ystart},{10,Xend},{20,Yend}) ->
+doSpline(Closed,_FirstPoint,[],Color,{10,Xstart},{20,Ystart},{10,Xend},{20,Yend}) ->
 	case Closed of 
 		0 -> io:format(")\"~ncolor=~p~n",[Color]),
 			 I = get(id),
@@ -360,16 +385,15 @@ doSpline(Closed,_FirstPoint,[],[],Color,{10,Xstart},{20,Ystart},{10,Xend},{20,Ye
 		1 -> io:format(")\"~ncolor=~p/>~n",[Color])
 	end;
 
-doSpline(Closed,FirstPoint,G10list,G20list,Color,Xstart,Ystart,Xend,Yend) ->
-	[{10,_X1}|G10tail] = G10list,
-	[{20,_Y1}|G20tail] = G20list,
+doSpline(Closed,FirstPoint,Glist,Color,Xstart,Ystart,Xend,Yend) ->
+	[_|Gtail] = Glist,
 	case FirstPoint of
 		1 -> 	I = get(id),
 					io:format("<edge~nid=\"~p\"~ncurve=\"xywdense(5 ",[I]),
 					put(id,I+1),
-					doSpline(Closed,0,G10list,G20list,Color,Xstart,Ystart,Xend,Yend);
-		_ ->  drawSplineSegment(G10list,G20list),
-				doSpline(Closed,0,G10tail,G20tail,Color,Xstart,Ystart,Xend,Yend)
+					doSpline(Closed,0,Glist,Color,Xstart,Ystart,Xend,Yend);
+		_ ->  drawSplineSegment(Glist),
+				doSpline(Closed,0,Gtail,Color,Xstart,Ystart,Xend,Yend)
 	end.
 
 %****************************************************************************************
@@ -393,6 +417,13 @@ setColor(Pen,A) ->
 		8 -> "rgba(0,0,0," ++ Alpha ++ ")";
 		_ -> "rgba(0,0,0," ++ Alpha ++ ")"
 	end.
+
+
+%****************************************************************************************
+% Merge two lists
+%****************************************************************************************
+	combine([],[],Result) -> Result;
+	combine([X|Restx],[Y|Resty],Result) -> combine(Restx,Resty,[{X,Y}|Result]).
 	
 %****************************************************************************************
 % Print an entity
@@ -442,6 +473,7 @@ print_entity({_,"SPLINE",Entity},_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
  	G10list = lookup(Entity, 10),
  	G20list = lookup(Entity, 20),
+ 	Glist = combine(G10list,G20list,[]),
 	Color = setColor(Pen,1),
 	Xstart = hd(G10list),
 	Ystart = hd(G20list),
@@ -451,8 +483,8 @@ print_entity({_,"SPLINE",Entity},_) ->
 		X when X == Xend andalso Ystart == Yend -> 1;
 		_ -> 0
 	end,
-	doSpline(Closed,1,G10list,G20list,Color,Xstart,Ystart,Xend,Yend);
-	
+	doSpline(Closed,1,Glist,Color,Xstart,Ystart,Xend,Yend);
+
 print_entity({_,"ARC",Entity},_) ->
 	[{_,X1}|_] = lookup(Entity, 10),
 	[{_,Y1}|_] = lookup(Entity, 20),
@@ -465,9 +497,8 @@ print_entity({_,"ARC",Entity},_) ->
 	{Xe,Ye} = polar(Radius, Endangle),
 	Xs1 = X1 + Xs, Ys1 = Y1 + Ys,
 	Xe1 = X1 + Xe, Ye1 = Y1 + Ye,
-	G10list = listpolar(x,X1,Y1,Radius,Startangle,Endangle),
-	G20list = listpolar(y,X1,Y1,Radius,Startangle,Endangle),
-	doSpline(0,1,G10list,G20list,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
+	Glist = listpolar(X1,Y1,Radius,Startangle,Endangle,-1),
+	doSpline(0,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
 
 print_entity({_,"ELLIPSE",Entity},_) -> 
 	[{_,_X1}|_] = lookup(Entity, 10),
@@ -493,9 +524,8 @@ print_entity({_,"CIRCLE",Entity},_) ->
 	{Xe,Ye} = polar(Radius, 360),
 	Xs1 = X1 + Xs, Ys1 = Y1 + Ys,
 	Xe1 = X1 + Xe, Ye1 = Y1 + Ye,
-	G10list = listpolar(x,X1,Y1,Radius,0,360),
-	G20list = listpolar(y,X1,Y1,Radius,0,360),
-	doSpline(1,1,G10list,G20list,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
+	Glist = listpolar(X1,Y1,Radius,0,360,-1),
+	doSpline(1,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
 
 print_entity({_,"POLYLINE",Entity},Ttable) -> 
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)), 
@@ -541,13 +571,15 @@ print_entity({_,"LWPOLYLINE",Entity},_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)), 
 	G10list = lookup(Entity, 10),
 	G20list = lookup(Entity, 20),
-	%[{_,Width}|_] = lookup(Entity, 43),
 	Width = lookup_safe(Entity, 43),
-	%io:format("Width: ~p",[Width]),
 	Color = setColor(Pen,1),
 	fixBulgelist(Entity,length(lookup(Entity, 10)),length(lookup(Entity, 42))), 
 	Bulgelist = lookup(Entity, 42),
 	[{70,Closed}] = lookup(Entity, 70),
+	Xstart = hd(G10list),
+	Ystart = hd(G20list),
+	Xend = hd(reverse(G10list)),
+	Yend = hd(reverse(G20list)),
 	case Closed of
 		1 -> 	G10list1 = append_startpoint(G10list),
 		  		G20list1 = append_startpoint(G20list),
@@ -556,7 +588,7 @@ print_entity({_,"LWPOLYLINE",Entity},_) ->
 	   		G20list1 = G20list,
 	   		Bulgelist1 = Bulgelist
 	end,
-   doLWPoly(Closed,1,Bulgelist1,G10list1,G20list1,Color,Width);
+   doLWPoly(Closed,1,Bulgelist1,G10list1,G20list1,Color,Width,Xstart,Ystart,Xend,Yend);
 
 print_entity({_,_Name,_Entity},_) -> ok.
 %		List = ets:tab2list(_Entity),
