@@ -7,11 +7,13 @@
 %%
 %%
 %% Draw key frames in AutoCAD or any CAD that can save as DXF R14, ASCII or Binary.
-%% Use TRACE, SOLID, POINT, LINE, CIRCLE and ARC. 
+%% Use TRACE, SOLID, POINT, LINE, CIRCLE, ARC and closed SPLINE. 
 %% PLINE segments works but safest is to explode PLINES prior to dxfout. 
-%% SPLINE can be used, but you have to dxfout to R12 and then dxfin. The spline is now automagically
+%% Open SPLINE can be used, but you may have to dxfout to R12 and then dxfin. The spline is now automagically
 %% converted to a pline.
-%% An ELLIPSE can be made a spline by offsetting it, then erase the ellipse and offset back.
+%%
+%% An ELLIPSE can be made a closed spline by offsetting it, then erase the ellipse and offset back.
+%%
 %% To avoid mirrored output, MIRROR drawing over the x-axis (Y=0). Move it back up and do dxfout. Undo move and mirror.
 %%
 %% ****** Installation ********
@@ -21,7 +23,7 @@
 %% ******* Use ********
 %% Start the erlang console with erl
 %%
-%% To konvert proctor_heel_plug.dxf layer 0 type:
+%% To convert proctor_heel_plug.dxf layer 0 type:
 %% dxf2vec:start(["proctor_heel_plug.dxf","0"]).
 %%
 %% To convert layer 0 and 1 type:
@@ -322,7 +324,7 @@ drawLWSegment([{10,X1}|_],[{20,Y1}|_],_B1,Width) -> %io:format("Bulge in lineseg
 %****************************************************************************************
 % Draw the lwpolyline
 %****************************************************************************************
-doLWPoly(Closed,_FirstVertex,[],[],[],Color,_Width,{10,Xstart},{20,Ystart},{10,Xend},{20,Yend}) -> % fill or stroke?
+doLWPoly(Closed,_FirstVertex,[],[],[],Color,_Width,{10,Xstart},{20,Ystart},{10,Xend},{20,Yend}) -> 
 	case Closed of 
 		0 -> io:format(")\"~ncolor=~p~n",[Color]),
 			 I = get(id),
@@ -356,12 +358,19 @@ drawSegment(B2,X1,Y1,X2,Y2) when
 	Cbce = cotbce(B2), 
 	Ycen = ycenter(X1,X2,Y1,Y2,Cbce),
 	Xcen = xcenter(X1,X2,Y1,Y2,Cbce), 
-	Rad = radius(X1,Y1,Xcen,Ycen),
-	St_ang = fixang(ang(X1,Y1,Xcen,Ycen)), 
-	End_ang = fixang(ang(X2,Y2,Xcen,Ycen)),
-	io:format("<!-- ctx.arc(~.12f,~.12f,~.12f,~.12f,~.12f,~p); -->~n",[Xcen,Ycen,Rad,St_ang,End_ang,B2<0]); 
+	Radius = radius(X1,Y1,Xcen,Ycen),
+	Startangle = fixang(ang(X1,Y1,Xcen,Ycen)), 
+	Endangle = fixang(ang(X2,Y2,Xcen,Ycen)),
+	Color = "rgba(0,0,0,1)",
+	{Xs,Ys} = polar(Radius, Startangle),
+	{Xe,Ye} = polar(Radius, Endangle),
+	Xs1 = Xcen + Xs, Ys1 = Ycen + Ys,
+	Xe1 = Xcen + Xe, Ye1 = Ycen + Ye,
+	Glist = listpolar(Xcen,Ycen,Radius,Startangle,Endangle,-1),
+	%io:format("*************3dpoly B2: ~p~n",[B2]),
+	doSpline(0,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
 drawSegment(_,_,_,X2,Y2) -> 
-	io:format("<!-- ctx.lineTo(~.12f,~.12f);  -->~n",[X2,Y2]).
+	io:format("~p,~p,1 ",[X2,Y2]).
 
 %****************************************************************************************
 % Draw a spline segment
@@ -458,7 +467,12 @@ print_entity({_,"LINE",Entity},_) ->
 	I = get(id),
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
 		[I,X1,Y1,X2,Y2,Color]),
-	put(id,I+1);
+	io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I+1,I+2]),
+	io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
+		[I+1,X1,Y1,Color]),
+	io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
+		[I+2,X2,Y2,Color]),
+	put(id,I+3);
 
 print_entity({_,"POINT",Entity},_) ->
 	[{_,X1}|_] = lookup(Entity, 10),
@@ -529,12 +543,16 @@ print_entity({_,"CIRCLE",Entity},_) ->
 
 print_entity({_,"POLYLINE",Entity},Ttable) -> 
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)), 
-	[{_,_Width}|_] = lookup_safe(Entity, 43),
+	%[{_,_Width}|_] = lookup_safe(Entity, 43),
 	_Color = setColor(Pen,1),
 	Closed = lookup_safe(Entity, 70), 
 	insert(Ttable,{firstvertex,1}),
-	insert(Ttable,{flags,Closed});
-	
+	insert(Ttable,{flags,Closed}),
+	insert(Ttable,{42,0}),
+	I = get(id),
+	io:format("<edge~nid=\"~p\"~ncurve=\"xywdense(5 ",[I]),
+	put(id,I+1);
+
 print_entity({_,"VERTEX",Entity},Ttable) -> 
 	[{_,X1}|_] = lookup(Entity, 10),
 	[{_,Y1}|_] = lookup(Entity, 20),
@@ -547,6 +565,7 @@ print_entity({_,"VERTEX",Entity},Ttable) ->
 		_ -> [{_,X2}|_] = lookup(Ttable, 10), 
 			 [{_,Y2}|_] = lookup(Ttable, 20),
 			 Bulge1 = lookup_safe(Ttable,42), % Bulge group on previous vertex
+			 %io:format("******************Bulge: ~p~n",[Bulge1]),
 			 drawSegment(Bulge1,X2,Y2,X1,Y1)
 	end,
 	insert(Ttable,{10,X1}),    % Save point
@@ -557,13 +576,14 @@ print_entity({_,"VERTEX",Entity},Ttable) ->
 print_entity({_,"SEQEND",_Entity},Ttable) ->
 	[{_,Closed}|_] = lookup(Ttable, flags),
 	case Closed of
-		0 -> 	io:format("<!-- ToDo: SEQEND -->~n",[]);
+		0 -> 	io:format(")\"~ncolor=\"rgba(0,0,0,1)\"/>~n",[]);
 		1 -> 	[{_,X1}|_] = lookup(Ttable, startx), % Draw the closing segment
 		 		[{_,Y1}|_] = lookup(Ttable, starty),
 				[{_,X2}|_] = lookup(Ttable, 10), 
 				[{_,Y2}|_] = lookup(Ttable, 20),
 				Bulge1 = lookup_safe(Ttable,42),
-				drawSegment(Bulge1,X2,Y2,X1,Y1)
+				drawSegment(Bulge1,X2,Y2,X1,Y1);
+		_ -> io:format(")\"~ncolor=\"rgba(0,0,0,1)\"/>~n",[])
 	end,
 	ets:delete_all_objects(Ttable);
 
