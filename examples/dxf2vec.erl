@@ -1,4 +1,4 @@
-%% Copyright (C) 2009 by S Kvamme
+%% Copyright (C) 2009-2020 by S Kvamme
 %% All rights reserved.
 %% The copyright holder hereby grants the rights of usage, distribution
 %% and modification of this software to everyone and for any purpose, as
@@ -465,7 +465,7 @@ print_entity({_,"LINE",Entity},_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	Color = setColor(Pen,1),
 	I = get(id),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
 		[I,X1,Y1,X2,Y2,Color]),
 	io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I+1,I+2]),
 	io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
