@@ -64,6 +64,7 @@ start(Args) ->
 	lists:foreach( fun(Layer) -> 
 		Etable = ets:new(entity,[duplicate_bag,private]), % Store all the entities in this table
 		Ttable = ets:new(tmp,[set,private]), % Store temporary group values
+		Vtable = ets:new(vertex,[set,private]), % Store vertices
 		print_layer_header(Layer),
 		case read_dxf_tag(DXF) of
 			error -> io:format("//Cannot read file: ~p~n",[DXF]),erlang:halt();
@@ -83,7 +84,7 @@ start(Args) ->
 				B3 = find_entities(B2),
 				entities(Etable,B3,string:to_upper(Layer))
 		end, 
-			print_entities(Etable,Ttable),
+			print_entities(Etable,Ttable,Vtable),
 			print_layer_trailer()
 		end,Layerarray),
 		print_trailer().
@@ -221,15 +222,15 @@ read_dxf_tag(File) ->
 %****************************************************************************************
 % Print all the entities, lowest thickness first
 %****************************************************************************************
-print_entities(Etable,Ttable) ->
+print_entities(Etable,Ttable,Vtable) ->
 	Elevlist = elevations(Etable),
-	print_entities1(Elevlist,Etable,Ttable).
+	print_entities1(Elevlist,Etable,Ttable,Vtable).
 	
-print_entities1([],_Etable,_Ttable) -> true;
-print_entities1([E|Tail],Etable,Ttable) ->
+print_entities1([],_Etable,_Ttable,_Vtable) -> true;
+print_entities1([E|Tail],Etable,Ttable,Vtable) ->
 	Entitytuplelist = ets:lookup(Etable,E),% io:format("Entities ~p~n",[Entitytuplelist]),
-	lists:foreach(fun (Entity) -> print_entity(Entity,Ttable) end, Entitytuplelist),
-	print_entities1(Tail,Etable,Ttable).
+	lists:foreach(fun (Entity) -> print_entity(Entity,Ttable,Vtable) end, Entitytuplelist),
+	print_entities1(Tail,Etable,Ttable,Vtable).
 
 %****************************************************************************************
 % Create a sorted list with all unique Thicknesses
@@ -406,6 +407,46 @@ doSpline(Closed,FirstPoint,Glist,Color,Xstart,Ystart,Xend,Yend) ->
 	end.
 
 %****************************************************************************************
+% Draw the line
+%****************************************************************************************
+doLine(X1,Y1,X2,Y2,Color,Vtable) ->
+	I = get(id),
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
+		[I,X1,Y1,X2,Y2,Color]),
+	case lookup_vertex(Vtable,X1,Y1) of
+		Id1 when is_integer(Id1) -> case lookup_vertex(Vtable,X2,Y2) of
+										Id2 when is_integer(Id2) -> % start and end vertex already defined
+											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[Id1,Id2]),
+											put(id,I+1);
+										_ -> % startvertex is already defined, add endvertex
+											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[Id1,I+1]),
+											io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
+												[I+1,X2,Y2,Color]),
+											ets:insert(Vtable,{I+1,X2,Y2}),
+											put(id,I+2)
+									end;
+
+							_ -> case lookup_vertex(Vtable,X2,Y2) of
+										Id2 when is_integer(Id2) -> % endvertex is already defined, add startvertex
+											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I+1],Id2),
+											io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
+												[I+1,X1,Y1,Color]),
+											ets:insert(Vtable,{I+1,X1,Y1}),
+												put(id,I+2);
+										_ -> % define start and end vertex
+											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I+1,I+2]),
+											io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
+												[I+1,X1,Y1,Color]),
+											ets:insert(Vtable,{I+1,X1,Y1}),
+											io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
+												[I+2,X2,Y2,Color]),
+											ets:insert(Vtable,{I+2,X2,Y2}),
+												put(id,I+3)
+									end
+	end.
+
+
+%****************************************************************************************
 % Set current drawing color
 %****************************************************************************************
 setColor(Pen,A) ->
@@ -437,44 +478,30 @@ setColor(Pen,A) ->
 %****************************************************************************************
 % Print an entity
 %****************************************************************************************
-print_entity({_,"TRACE",Entity},_) -> print_entity({0,"SOLID",Entity},0);
+print_entity({_,"TRACE",Entity},_,Vtable) -> print_entity({0,"SOLID",Entity},0,Vtable);
 
-print_entity({_,"SOLID",Entity},_) ->
+print_entity({_,"SOLID",Entity},_,Vtable) ->
 	[{_,X1}|_] = lookup(Entity, 10),[{_,Y1}|_] = lookup(Entity, 20),
 	[{_,X2}|_] = lookup(Entity, 12),[{_,Y2}|_] = lookup(Entity, 22),
 	[{_,X3}|_] = lookup(Entity, 13),[{_,Y3}|_] = lookup(Entity, 23),
 	[{_,X4}|_] = lookup(Entity, 11),[{_,Y4}|_] = lookup(Entity, 21),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	Color = setColor(Pen,1),
-	I = get(id),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
-		[I,X1,Y1,X2,Y2,Color]),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
-		[I+1,X2,Y2,X3,Y3,Color]),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
-		[I+2,X3,Y3,X4,Y4,Color]),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p />~n",
-		[I+4,X4,Y4,X1,Y1,Color]),
-	put(id,I+4);
+	doLine(X1,Y1,X2,Y2,Color,Vtable),
+	doLine(X2,Y2,X3,Y3,Color,Vtable),
+	doLine(X3,Y3,X4,Y4,Color,Vtable),
+	doLine(X4,Y4,X1,Y1,Color,Vtable);
 	
-print_entity({_,"LINE",Entity},_) ->
+print_entity({_,"LINE",Entity},_,Vtable) ->
 	[{_,X1}|_] = lookup(Entity, 10),
 	[{_,Y1}|_] = lookup(Entity, 20),
 	[{_,X2}|_] = lookup(Entity, 11),
 	[{_,Y2}|_] = lookup(Entity, 21),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	Color = setColor(Pen,1),
-	I = get(id),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
-		[I,X1,Y1,X2,Y2,Color]),
-	io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I+1,I+2]),
-	io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
-		[I+1,X1,Y1,Color]),
-	io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
-		[I+2,X2,Y2,Color]),
-	put(id,I+3);
+	doLine(X1,Y1,X2,Y2,Color,Vtable);
 
-print_entity({_,"POINT",Entity},_) ->
+print_entity({_,"POINT",Entity},_,_) ->
 	[{_,X1}|_] = lookup(Entity, 10),
 	[{_,Y1}|_] = lookup(Entity, 20),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
@@ -483,7 +510,7 @@ print_entity({_,"POINT",Entity},_) ->
 	io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",[I,X1,Y1,Color]),
 	put(id,I+1);
 
-print_entity({_,"SPLINE",Entity},_) ->
+print_entity({_,"SPLINE",Entity},_,_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
  	G10list = lookup(Entity, 10),
  	G20list = lookup(Entity, 20),
@@ -499,7 +526,7 @@ print_entity({_,"SPLINE",Entity},_) ->
 	end,
 	doSpline(Closed,1,Glist,Color,Xstart,Ystart,Xend,Yend);
 
-print_entity({_,"ARC",Entity},_) ->
+print_entity({_,"ARC",Entity},_,_) ->
 	[{_,X1}|_] = lookup(Entity, 10),
 	[{_,Y1}|_] = lookup(Entity, 20),
 	[{_,Radius}|_] = lookup(Entity, 40),
@@ -514,7 +541,7 @@ print_entity({_,"ARC",Entity},_) ->
 	Glist = listpolar(X1,Y1,Radius,Startangle,Endangle,-1),
 	doSpline(0,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
 
-print_entity({_,"ELLIPSE",Entity},_) -> 
+print_entity({_,"ELLIPSE",Entity},_,_) -> 
 	[{_,_X1}|_] = lookup(Entity, 10),
 	[{_,_Y1}|_] = lookup(Entity, 20),
 	[{_,RadiusX}|_] = lookup(Entity, 11),
@@ -528,7 +555,7 @@ print_entity({_,"ELLIPSE",Entity},_) ->
 	_Color = setColor(Pen,1),
 	io:format("<!-- Use command OFFSET on the ellipse to convert it to a spline -->~n",[]);
 
-print_entity({_,"CIRCLE",Entity},_) ->
+print_entity({_,"CIRCLE",Entity},_,_) ->
 	[{_,X1}|_] = lookup(Entity, 10),
   	[{_,Y1}|_] = lookup(Entity, 20),
 	[{_,Radius}|_] = lookup(Entity, 40),
@@ -541,7 +568,7 @@ print_entity({_,"CIRCLE",Entity},_) ->
 	Glist = listpolar(X1,Y1,Radius,0,360,-1),
 	doSpline(1,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
 
-print_entity({_,"POLYLINE",Entity},Ttable) -> 
+print_entity({_,"POLYLINE",Entity},Ttable,_) -> 
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)), 
 	%[{_,_Width}|_] = lookup_safe(Entity, 43),
 	_Color = setColor(Pen,1),
@@ -553,7 +580,7 @@ print_entity({_,"POLYLINE",Entity},Ttable) ->
 	io:format("<edge~nid=\"~p\"~ncurve=\"xywdense(5 ",[I]),
 	put(id,I+1);
 
-print_entity({_,"VERTEX",Entity},Ttable) -> 
+print_entity({_,"VERTEX",Entity},Ttable,_) -> 
 	[{_,X1}|_] = lookup(Entity, 10),
 	[{_,Y1}|_] = lookup(Entity, 20),
 	[{_,FV}|_] = lookup(Ttable, firstvertex),
@@ -573,7 +600,7 @@ print_entity({_,"VERTEX",Entity},Ttable) ->
 	insert(Ttable,{42,Bulge}); % Save bulge
 	
 
-print_entity({_,"SEQEND",_Entity},Ttable) ->
+print_entity({_,"SEQEND",_Entity},Ttable,_) ->
 	[{_,Closed}|_] = lookup(Ttable, flags),
 	case Closed of
 		0 -> 	io:format(")\"~ncolor=\"rgba(0,0,0,1)\"/>~n",[]);
@@ -587,7 +614,7 @@ print_entity({_,"SEQEND",_Entity},Ttable) ->
 	end,
 	ets:delete_all_objects(Ttable);
 
-print_entity({_,"LWPOLYLINE",Entity},_) ->
+print_entity({_,"LWPOLYLINE",Entity},_,_) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)), 
 	G10list = lookup(Entity, 10),
 	G20list = lookup(Entity, 20),
@@ -610,7 +637,7 @@ print_entity({_,"LWPOLYLINE",Entity},_) ->
 	end,
    doLWPoly(Closed,1,Bulgelist1,G10list1,G20list1,Color,Width,Xstart,Ystart,Xend,Yend);
 
-print_entity({_,_Name,_Entity},_) -> ok.
+print_entity({_,_Name,_Entity},_,_) -> ok.
 %		List = ets:tab2list(_Entity),
 %		io:format("~p ~p~n", [_Name,List]).
 
@@ -631,6 +658,25 @@ lookup_safe(Entity,G) ->
 		[{_,Bulge}|_] -> Bulge;
 		_ -> 0
 	end.
+
+% Return vertex id if vertex is already defined
+lookup_vertex(Vtable,X1,Y1) ->
+	case ets:first(Vtable) of
+		'$end_of_table' -> undefined;
+		Key -> [Tuple] = lookup(Vtable,Key),
+					l_v(Vtable,Key,Tuple,X1,Y1)
+	end.
+
+l_v(_Vtable,'$end_of_table',_,_,_) -> undefined;
+l_v(_Vtable,_,{Id,X,Y},X1,Y1) when X == X1 andalso Y == Y1 -> Id;
+l_v(Vtable,Oldkey,Oldtup,X,Y) -> 
+	case ets:next(Vtable,Oldkey) of
+			'$end_of_table' -> l_v(Vtable,'$end_of_table',Oldtup,X,Y);
+						Key -> [Tuple] = lookup(Vtable,Key),
+						l_v(Vtable,Key,Tuple,X,Y)
+	end.
+
+
 
 %****************************************************************************************
 % Find the header section in the dxf file
