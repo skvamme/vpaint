@@ -7,7 +7,7 @@
 %%
 %%
 %% Draw key frames in AutoCAD or any CAD that can save as DXF R14, ASCII or Binary.
-%% Use TRACE, SOLID, POINT, LINE, CIRCLE, ARC and closed SPLINE. 
+%% Use TRACE, SOLID, SKETCH, POINT, LINE, CIRCLE, ARC and closed SPLINE. 
 %% PLINE segments works but safest is to explode PLINES prior to dxfout. 
 %% Open SPLINE can be used, but you may have to dxfout to R12 and then dxfin. The spline is now automagically
 %% converted to a pline.
@@ -354,7 +354,7 @@ doLWPoly(Closed,FirstVertex,G42list,G10list,G20list,Color,Width,{10,Xstart},{20,
 %****************************************************************************************
 % Draw a 3d polyline segment
 %****************************************************************************************
-drawSegment(B2,X1,Y1,X2,Y2) when
+drawSegment(B2,X1,Y1,X2,Y2,Vtable) when
 			(B2 > 0.000063) or (B2 < -0.000063) -> 
 	Cbce = cotbce(B2), 
 	Ycen = ycenter(X1,X2,Y1,Y2,Cbce),
@@ -369,8 +369,8 @@ drawSegment(B2,X1,Y1,X2,Y2) when
 	Xe1 = Xcen + Xe, Ye1 = Ycen + Ye,
 	Glist = listpolar(Xcen,Ycen,Radius,Startangle,Endangle,-1),
 	%io:format("*************3dpoly B2: ~p~n",[B2]),
-	doSpline(0,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
-drawSegment(_,_,_,X2,Y2) -> 
+	doSpline(0,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1},Vtable);
+drawSegment(_,_,_,X2,Y2,_) -> 
 	io:format("~p,~p,1 ",[X2,Y2]).
 
 %****************************************************************************************
@@ -382,66 +382,57 @@ drawSplineSegment([{{10,X1},{20,Y1}}|_]) ->
 %****************************************************************************************
 % Draw the spline
 %****************************************************************************************
-doSpline(Closed,_FirstPoint,[],Color,{10,Xstart},{20,Ystart},{10,Xend},{20,Yend}) ->
+doSpline(Closed,_FirstPoint,[],Color,{10,Xstart},{20,Ystart},{10,Xend},{20,Yend},Vtable) ->
 	case Closed of 
 		0 -> io:format(")\"~ncolor=~p~n",[Color]),
-			 I = get(id),
-			 io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I,I+1]),
-			 io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
-			 	[I,Xstart,Ystart,Color]),
-			 io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
-			 	[I+1,Xend,Yend,Color]),
-			 put(id,I+2);
+			 endedge(Xstart,Ystart,Xend,Yend,Color,Vtable);
 		1 -> io:format(")\"~ncolor=~p/>~n",[Color])
 	end;
 
-doSpline(Closed,FirstPoint,Glist,Color,Xstart,Ystart,Xend,Yend) ->
+doSpline(Closed,FirstPoint,Glist,Color,Xstart,Ystart,Xend,Yend,Vtable) ->
 	[_|Gtail] = Glist,
 	case FirstPoint of
 		1 -> 	I = get(id),
 					io:format("<edge~nid=\"~p\"~ncurve=\"xywdense(5 ",[I]),
 					put(id,I+1),
-					doSpline(Closed,0,Glist,Color,Xstart,Ystart,Xend,Yend);
+					doSpline(Closed,0,Glist,Color,Xstart,Ystart,Xend,Yend,Vtable);
 		_ ->  drawSplineSegment(Glist),
-				doSpline(Closed,0,Gtail,Color,Xstart,Ystart,Xend,Yend)
+				doSpline(Closed,0,Gtail,Color,Xstart,Ystart,Xend,Yend,Vtable)
 	end.
 
 %****************************************************************************************
-% Draw the line
+% Complete the edge, add vertices if needed
 %****************************************************************************************
-doLine(X1,Y1,X2,Y2,Color,Vtable) ->
-	I = get(id),
-	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
-		[I,X1,Y1,X2,Y2,Color]),
+endedge(X1,Y1,X2,Y2,Color,Vtable) ->
+	I = get(id), 
 	case lookup_vertex(Vtable,X1,Y1) of
 		Id1 when is_integer(Id1) -> case lookup_vertex(Vtable,X2,Y2) of
 										Id2 when is_integer(Id2) -> % start and end vertex already defined
-											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[Id1,Id2]),
-											put(id,I+1);
+											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[Id1,Id2]);
 										_ -> % startvertex is already defined, add endvertex
-											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[Id1,I+1]),
+											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[Id1,I]),
 											io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
-												[I+1,X2,Y2,Color]),
-											ets:insert(Vtable,{I+1,X2,Y2}),
-											put(id,I+2)
+												[I,X2,Y2,Color]),
+											ets:insert(Vtable,{I,X2,Y2}),
+											put(id,I+1)
 									end;
 
 							_ -> case lookup_vertex(Vtable,X2,Y2) of
 										Id2 when is_integer(Id2) -> % endvertex is already defined, add startvertex
-											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I+1],Id2),
+											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I],Id2),
 											io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
-												[I+1,X1,Y1,Color]),
-											ets:insert(Vtable,{I+1,X1,Y1}),
-												put(id,I+2);
+												[I,X1,Y1,Color]),
+											ets:insert(Vtable,{I,X1,Y1}),
+												put(id,I+1);
 										_ -> % define start and end vertex
-											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I+1,I+2]),
+											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I,I+1]),
 											io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
-												[I+1,X1,Y1,Color]),
-											ets:insert(Vtable,{I+1,X1,Y1}),
+												[I,X1,Y1,Color]),
+											ets:insert(Vtable,{I,X1,Y1}),
 											io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
-												[I+2,X2,Y2,Color]),
-											ets:insert(Vtable,{I+2,X2,Y2}),
-												put(id,I+3)
+												[I+1,X2,Y2,Color]),
+											ets:insert(Vtable,{I+1,X2,Y2}),
+												put(id,I+2)
 									end
 	end.
 
@@ -487,10 +478,22 @@ print_entity({_,"SOLID",Entity},_,Vtable) ->
 	[{_,X4}|_] = lookup(Entity, 11),[{_,Y4}|_] = lookup(Entity, 21),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	Color = setColor(Pen,1),
-	doLine(X1,Y1,X2,Y2,Color,Vtable),
-	doLine(X2,Y2,X3,Y3,Color,Vtable),
-	doLine(X3,Y3,X4,Y4,Color,Vtable),
-	doLine(X4,Y4,X1,Y1,Color,Vtable);
+	I = get(id), put(id,I+1),
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
+		[I,X1,Y1,X2,Y2,Color]),
+	endedge(X1,Y1,X2,Y2,Color,Vtable),
+	I = get(id), put(id,I+1),
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
+		[I,X1,Y1,X2,Y2,Color]),
+	endedge(X2,Y2,X3,Y3,Color,Vtable),
+	I = get(id), put(id,I+1),
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
+		[I,X1,Y1,X2,Y2,Color]),
+	endedge(X3,Y3,X4,Y4,Color,Vtable),
+	I = get(id), put(id,I+1),
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
+		[I,X1,Y1,X2,Y2,Color]),
+	endedge(X4,Y4,X1,Y1,Color,Vtable);
 	
 print_entity({_,"LINE",Entity},_,Vtable) ->
 	[{_,X1}|_] = lookup(Entity, 10),
@@ -499,7 +502,10 @@ print_entity({_,"LINE",Entity},_,Vtable) ->
 	[{_,Y2}|_] = lookup(Entity, 21),
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
 	Color = setColor(Pen,1),
-	doLine(X1,Y1,X2,Y2,Color,Vtable);
+	I = get(id), put(id,I+1),
+	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
+		[I,X1,Y1,X2,Y2,Color]),
+	endedge(X1,Y1,X2,Y2,Color,Vtable);
 
 print_entity({_,"POINT",Entity},_,_) ->
 	[{_,X1}|_] = lookup(Entity, 10),
@@ -510,7 +516,7 @@ print_entity({_,"POINT",Entity},_,_) ->
 	io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",[I,X1,Y1,Color]),
 	put(id,I+1);
 
-print_entity({_,"SPLINE",Entity},_,_) ->
+print_entity({_,"SPLINE",Entity},_,Vtable) ->
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)),
  	G10list = lookup(Entity, 10),
  	G20list = lookup(Entity, 20),
@@ -524,9 +530,9 @@ print_entity({_,"SPLINE",Entity},_,_) ->
 		X when X == Xend andalso Ystart == Yend -> 1;
 		_ -> 0
 	end,
-	doSpline(Closed,1,Glist,Color,Xstart,Ystart,Xend,Yend);
+	doSpline(Closed,1,Glist,Color,Xstart,Ystart,Xend,Yend,Vtable);
 
-print_entity({_,"ARC",Entity},_,_) ->
+print_entity({_,"ARC",Entity},_,Vtable) ->
 	[{_,X1}|_] = lookup(Entity, 10),
 	[{_,Y1}|_] = lookup(Entity, 20),
 	[{_,Radius}|_] = lookup(Entity, 40),
@@ -539,7 +545,7 @@ print_entity({_,"ARC",Entity},_,_) ->
 	Xs1 = X1 + Xs, Ys1 = Y1 + Ys,
 	Xe1 = X1 + Xe, Ye1 = Y1 + Ye,
 	Glist = listpolar(X1,Y1,Radius,Startangle,Endangle,-1),
-	doSpline(0,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
+	doSpline(0,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1},Vtable);
 
 print_entity({_,"ELLIPSE",Entity},_,_) -> 
 	[{_,_X1}|_] = lookup(Entity, 10),
@@ -555,7 +561,7 @@ print_entity({_,"ELLIPSE",Entity},_,_) ->
 	_Color = setColor(Pen,1),
 	io:format("<!-- Use command OFFSET on the ellipse to convert it to a spline -->~n",[]);
 
-print_entity({_,"CIRCLE",Entity},_,_) ->
+print_entity({_,"CIRCLE",Entity},_,Vtable) ->
 	[{_,X1}|_] = lookup(Entity, 10),
   	[{_,Y1}|_] = lookup(Entity, 20),
 	[{_,Radius}|_] = lookup(Entity, 40),
@@ -566,7 +572,7 @@ print_entity({_,"CIRCLE",Entity},_,_) ->
 	Xs1 = X1 + Xs, Ys1 = Y1 + Ys,
 	Xe1 = X1 + Xe, Ye1 = Y1 + Ye,
 	Glist = listpolar(X1,Y1,Radius,0,360,-1),
-	doSpline(1,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1});
+	doSpline(1,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1},Vtable);
 
 print_entity({_,"POLYLINE",Entity},Ttable,_) -> 
 	[{_,Pen}|_] = reverse(lookup(Entity, 62)), 
@@ -580,7 +586,7 @@ print_entity({_,"POLYLINE",Entity},Ttable,_) ->
 	io:format("<edge~nid=\"~p\"~ncurve=\"xywdense(5 ",[I]),
 	put(id,I+1);
 
-print_entity({_,"VERTEX",Entity},Ttable,_) -> 
+print_entity({_,"VERTEX",Entity},Ttable,Vtable) -> 
 	[{_,X1}|_] = lookup(Entity, 10),
 	[{_,Y1}|_] = lookup(Entity, 20),
 	[{_,FV}|_] = lookup(Ttable, firstvertex),
@@ -593,14 +599,14 @@ print_entity({_,"VERTEX",Entity},Ttable,_) ->
 			 [{_,Y2}|_] = lookup(Ttable, 20),
 			 Bulge1 = lookup_safe(Ttable,42), % Bulge group on previous vertex
 			 %io:format("******************Bulge: ~p~n",[Bulge1]),
-			 drawSegment(Bulge1,X2,Y2,X1,Y1)
+			 drawSegment(Bulge1,X2,Y2,X1,Y1,Vtable)
 	end,
 	insert(Ttable,{10,X1}),    % Save point
 	insert(Ttable,{20,Y1}),
 	insert(Ttable,{42,Bulge}); % Save bulge
 	
 
-print_entity({_,"SEQEND",_Entity},Ttable,_) ->
+print_entity({_,"SEQEND",_Entity},Ttable,Vtable) ->
 	[{_,Closed}|_] = lookup(Ttable, flags),
 	case Closed of
 		0 -> 	io:format(")\"~ncolor=\"rgba(0,0,0,1)\"/>~n",[]);
@@ -609,7 +615,7 @@ print_entity({_,"SEQEND",_Entity},Ttable,_) ->
 				[{_,X2}|_] = lookup(Ttable, 10), 
 				[{_,Y2}|_] = lookup(Ttable, 20),
 				Bulge1 = lookup_safe(Ttable,42),
-				drawSegment(Bulge1,X2,Y2,X1,Y1);
+				drawSegment(Bulge1,X2,Y2,X1,Y1,Vtable);
 		_ -> io:format(")\"~ncolor=\"rgba(0,0,0,1)\"/>~n",[])
 	end,
 	ets:delete_all_objects(Ttable);
