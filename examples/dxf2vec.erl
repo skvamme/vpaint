@@ -300,6 +300,21 @@ angles_n(From,To,Result) ->
 		_ -> angles_n(360,To,[360|Result])
 	end.
 
+% Compare two floats, truncate at 10 places to correct for fp error
+% almost_eq([]) -> false; 
+% almost_eq([{_Id,X,Y}])  when is_float(X) andalso is_float(Y) -> 
+% 	X1 = float_to_list(X, [{decimals, 12}]), Y1 = float_to_list(Y, [{decimals, 12}]),
+% 	{X2, _} = lists:split(10,X1), {Y2, _} = lists:split(10,Y1),
+% 	X3 = list_to_float(X2), Y3 = list_to_float(Y2), %io:format("X3Y3 = ~p ~p~n",[X3,Y3]),
+% 	X3 =:= Y3. 
+
+% Compare two floats, truncate at 10 places to correct for fp error
+almost_eq([]) -> false; 
+almost_eq([{_Id,X,Y}])  when is_float(X) andalso is_float(Y) -> 
+	X1 = X * 10000000000, Y1 = Y * 10000000000,
+	X2 = trunc(X1), Y2 = trunc(Y1),
+	X2 =:= Y2. 
+
 %****************************************************************************************
 % Draw an lwpolyline segment
 %****************************************************************************************
@@ -371,13 +386,13 @@ drawSegment(B2,X1,Y1,X2,Y2,Vtable) when
 	%io:format("*************3dpoly B2: ~p~n",[B2]),
 	doSpline(0,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1},Vtable);
 drawSegment(_,_,_,X2,Y2,_) -> 
-	io:format("~p,~p,1 ",[X2,Y2]).
+	io:format("~.12f,~.12f,1 ",[X2,Y2]).
 
 %****************************************************************************************
 % Draw a spline segment
 %****************************************************************************************
 drawSplineSegment([{{10,X1},{20,Y1}}|_]) -> 
-	io:format("~p,~p,1 ",[X1,Y1]).
+	io:format("~.12f,~.12f,1 ",[X1,Y1]).
 
 %****************************************************************************************
 % Draw the spline
@@ -482,17 +497,17 @@ print_entity({_,"SOLID",Entity},_,Vtable) ->
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
 		[I,X1,Y1,X2,Y2,Color]),
 	endedge(X1,Y1,X2,Y2,Color,Vtable),
-	I = get(id), put(id,I+1),
+	I1 = get(id), put(id,I1+1),
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
-		[I,X1,Y1,X2,Y2,Color]),
+		[I1,X1,Y1,X2,Y2,Color]),
 	endedge(X2,Y2,X3,Y3,Color,Vtable),
-	I = get(id), put(id,I+1),
+	I2 = get(id), put(id,I2+1),
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
-		[I,X1,Y1,X2,Y2,Color]),
+		[I2,X1,Y1,X2,Y2,Color]),
 	endedge(X3,Y3,X4,Y4,Color,Vtable),
-	I = get(id), put(id,I+1),
+	I3 = get(id), put(id,I3+1),
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
-		[I,X1,Y1,X2,Y2,Color]),
+		[I3,X1,Y1,X2,Y2,Color]),
 	endedge(X4,Y4,X1,Y1,Color,Vtable);
 	
 print_entity({_,"LINE",Entity},_,Vtable) ->
@@ -666,20 +681,20 @@ lookup_safe(Entity,G) ->
 	end.
 
 % Return vertex id if vertex is already defined
-lookup_vertex(Vtable,X1,Y1) ->
+lookup_vertex(Vtable,X,Y) ->
 	case ets:first(Vtable) of
-		'$end_of_table' -> undefined;
-		Key -> [Tuple] = lookup(Vtable,Key),
-					l_v(Vtable,Key,Tuple,X1,Y1)
+		'$end_of_table' -> undefined; % Table is empty
+		Key -> l_v(Vtable,Key,X,Y)
 	end.
 
-l_v(_Vtable,'$end_of_table',_,_,_) -> undefined;
-l_v(_Vtable,_,{Id,X,Y},X1,Y1) when X == X1 andalso Y == Y1 -> Id;
-l_v(Vtable,Oldkey,Oldtup,X,Y) -> 
-	case ets:next(Vtable,Oldkey) of
-			'$end_of_table' -> l_v(Vtable,'$end_of_table',Oldtup,X,Y);
-						Key -> [Tuple] = lookup(Vtable,Key),
-						l_v(Vtable,Key,Tuple,X,Y)
+l_v(_Vtable,'$end_of_table',_X,_Y) -> undefined; %Vertex is not found
+l_v(Vtable,Key,X,Y) -> 
+	[{Id,X1,Y1}] = lookup(Vtable,Key),
+	Bool = almost_eq([{0,X,X1}]) and almost_eq([{0,Y,Y1}]),
+	case Bool of
+		true -> Id;
+		false -> Key1 = ets:next(Vtable,Key),
+			l_v(Vtable,Key1,X,Y)						
 	end.
 
 
