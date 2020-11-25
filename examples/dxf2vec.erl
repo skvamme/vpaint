@@ -301,19 +301,9 @@ angles_n(From,To,Result) ->
 	end.
 
 % Compare two floats, truncate at 10 places to correct for fp error
-% almost_eq([]) -> false; 
-% almost_eq([{_Id,X,Y}])  when is_float(X) andalso is_float(Y) -> 
-% 	X1 = float_to_list(X, [{decimals, 12}]), Y1 = float_to_list(Y, [{decimals, 12}]),
-% 	{X2, _} = lists:split(10,X1), {Y2, _} = lists:split(10,Y1),
-% 	X3 = list_to_float(X2), Y3 = list_to_float(Y2), %io:format("X3Y3 = ~p ~p~n",[X3,Y3]),
-% 	X3 =:= Y3. 
-
-% Compare two floats, truncate at 10 places to correct for fp error
-almost_eq([]) -> false; 
-almost_eq([{_Id,X,Y}])  when is_float(X) andalso is_float(Y) -> 
-	X1 = X * 10000000000, Y1 = Y * 10000000000,
-	X2 = trunc(X1), Y2 = trunc(Y1),
-	X2 =:= Y2. 
+almost_eq({X,Y}) -> 
+	X1 = float_to_list(X,[{decimals, 4}, compact]), Y1 = float_to_list(Y,[{decimals, 4}, compact]),
+	X1 == Y1. 
 
 %****************************************************************************************
 % Draw an lwpolyline segment
@@ -499,15 +489,15 @@ print_entity({_,"SOLID",Entity},_,Vtable) ->
 	endedge(X1,Y1,X2,Y2,Color,Vtable),
 	I1 = get(id), put(id,I1+1),
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
-		[I1,X1,Y1,X2,Y2,Color]),
+		[I1,X2,Y2,X3,Y3,Color]),
 	endedge(X2,Y2,X3,Y3,Color,Vtable),
 	I2 = get(id), put(id,I2+1),
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
-		[I2,X1,Y1,X2,Y2,Color]),
+		[I2,X3,Y3,X4,Y4,Color]),
 	endedge(X3,Y3,X4,Y4,Color,Vtable),
 	I3 = get(id), put(id,I3+1),
 	io:format("<edge ~nid=\"~p\" ~ncurve=\"xywdense(5 ~.12f,~.12f,1 ~.12f,~.12f,1)\" ~ncolor=~p~n",
-		[I3,X1,Y1,X2,Y2,Color]),
+		[I3,X4,Y4,X1,Y1,Color]),
 	endedge(X4,Y4,X1,Y1,Color,Vtable);
 	
 print_entity({_,"LINE",Entity},_,Vtable) ->
@@ -690,7 +680,7 @@ lookup_vertex(Vtable,X,Y) ->
 l_v(_Vtable,'$end_of_table',_X,_Y) -> undefined; %Vertex is not found
 l_v(Vtable,Key,X,Y) -> 
 	[{Id,X1,Y1}] = lookup(Vtable,Key),
-	Bool = almost_eq([{0,X,X1}]) and almost_eq([{0,Y,Y1}]),
+	Bool = almost_eq({X,X1}) and almost_eq({Y,Y1}),
 	case Bool of
 		true -> Id;
 		false -> Key1 = ets:next(Vtable,Key),
