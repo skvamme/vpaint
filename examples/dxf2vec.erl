@@ -16,6 +16,10 @@
 %%
 %% To avoid mirrored output, MIRROR drawing over the x-axis (Y=0). Move it back up and do dxfout. Undo move and mirror.
 %%
+%% If you want to use the paint bucket in a TRACE, erase the short lines that are connecting the segments.
+%%
+%% If you draw in QCAD, set PAPERSIZE to get desired canvas size in VPaint.
+%%
 %% ****** Installation ********
 %% Download and install latest Erlang from www.erlang.org or use apt-get or similar package manager.
 %% Compile dxf2vec.erl, type: erlc dxf2vec.erl
@@ -276,7 +280,7 @@ fixang(Ang) -> Ang.
 polar(Radius,Ang) -> A1 = dtor(Ang), X = Radius * math:cos(A1), Y = Radius * math:sin(A1), {X,Y}. 
 
 % Returns lists of 10 and 20 Groups, angles in degres
-listpolar(X1,Y1,Radius,Startangle,Endangle,Bulge) -> %io:format("******************Bulge: ~p Startang: ~p Endang: ~p~n",
+listpolar(X1,Y1,Radius,Startangle,Endangle,Bulge) -> 
 %		[Bulge,Startangle,Endangle]),
 	Anglelist = case Bulge of
 		B when B > 0 -> angles_n(round(Startangle),round(Endangle),[]);
@@ -300,7 +304,7 @@ angles_n(From,To,Result) ->
 		_ -> angles_n(360,To,[360|Result])
 	end.
 
-% Compare two floats, truncate at 10 places to correct for fp error
+% Compare two floats, truncate at 4 places to correct for fp error
 almost_eq({X,Y}) -> 
 	X1 = float_to_list(X,[{decimals, 4}, compact]), Y1 = float_to_list(Y,[{decimals, 4}, compact]),
 	X1 == Y1. 
@@ -373,7 +377,6 @@ drawSegment(B2,X1,Y1,X2,Y2,Vtable) when
 	Xs1 = Xcen + Xs, Ys1 = Ycen + Ys,
 	Xe1 = Xcen + Xe, Ye1 = Ycen + Ye,
 	Glist = listpolar(Xcen,Ycen,Radius,Startangle,Endangle,-1),
-	%io:format("*************3dpoly B2: ~p~n",[B2]),
 	doSpline(0,1,Glist,Color,{10,Xs1},{20,Ys1},{10,Xe1},{20,Ye1},Vtable);
 drawSegment(_,_,_,X2,Y2,_) -> 
 	io:format("~.12f,~.12f,1 ",[X2,Y2]).
@@ -424,7 +427,7 @@ endedge(X1,Y1,X2,Y2,Color,Vtable) ->
 
 							_ -> case lookup_vertex(Vtable,X2,Y2) of
 										Id2 when is_integer(Id2) -> % endvertex is already defined, add startvertex
-											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I],Id2),
+											io:format("startvertex=\"~p\"~nendvertex=\"~p\"/>~n",[I,Id2]),
 											io:format("<vertex~nid=\"~p\"~nposition=\"~.12f ~.12f\"~ncolor=~p/>~n",
 												[I,X1,Y1,Color]),
 											ets:insert(Vtable,{I,X1,Y1}),
@@ -527,10 +530,10 @@ print_entity({_,"SPLINE",Entity},_,Vtable) ->
  	G20list = lookup(Entity, 20),
  	Glist = combine(G10list,G20list,[]),
 	Color = setColor(Pen,1),
-	Xstart = hd(G10list),
-	Ystart = hd(G20list),
-	Xend = hd(reverse(G10list)),
-	Yend = hd(reverse(G20list)),
+	Xend = hd(G10list),
+	Yend = hd(G20list),
+	Xstart = hd(reverse(G10list)),
+	Ystart = hd(reverse(G20list)),
 	Closed = case Xstart of
 		X when X == Xend andalso Ystart == Yend -> 1;
 		_ -> 0
@@ -707,7 +710,7 @@ limits1({B,"$EXTMIN",9}) ->
 	{B1,X1,_G1} = parse_dxf(B), 
 	{B2,Y1,_G2} = parse_dxf(B1),
 	put(ll,{round(X1),round(Y1)}),
-    io:format("<!-- bbox = [~B,~B,",[round(X1),round(Y1)]),
+    io:format("<!-- [~B,~B,",[round(X1),round(Y1)]),
 	limits1({B2,"",0});
 limits1({B,"$EXTMAX",9}) -> 
 	{B1,X2,_G1} = parse_dxf(B), 
